@@ -32,8 +32,8 @@ def train_tickets_by_city(origin_city, destination_city, depart_date):
     path_to_train_cards = "//div[contains(@class, 'b-train__schedule__train_card')]"
     train_number_path = ".//span[contains(@class, 'train_number_link')]"
     route_time_path = ".//span[contains(@class, 't-txt-s route_time')]"
-    card_seats_path = ".//span[contains(@class, 'car-type') or contains(@class, 'car_type')]"
-    price_path = ".//span[contains(@class, 't-ttl_third') or contains(@class, 'seats_price t-txt-s')]"
+    card_seats_path = ".//div/div/div/a/div/div/span[contains(@class, 'car-type') or contains(@class, 'car_type')]"
+    price_path = ".//div/div/div/a/div/div/span[contains(@class, 't-ttl_third') or contains(@class, 'seats_price t-txt-s')]"
     tickets = []
     for train_card_element in r.html.xpath(path_to_train_cards):
         ticket = {}
