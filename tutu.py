@@ -1,5 +1,6 @@
 import requests
 import secrets
+import csv
 from requests_html import HTMLSession
 
 
@@ -12,17 +13,45 @@ def get_html(url, params=0, header=0):
         print('Сетевая ошибка')
         return False
 
+def get_cities_codes(origin_city, destination_city):
+    with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
+        fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
+        reader = csv.DictReader(f, fields, delimiter=';')
+
+        routes = []
+        for row in reader:
+            if (origin_city in row.get('departure_station_name')) and (destination_city in row.get('arrival_station_name')):
+                route = {}
+                route['departure_station_name'] = row.get('departure_station_name')
+                route['departure_station_id'] = row.get('departure_station_id')
+                route['arrival_station_name'] = row.get('arrival_station_name')
+                route['arrival_station_id'] = row.get('arrival_station_id')
+                routes.append(route)
+        return routes
 
 def train_tickets_by_city(origin_city, destination_city, depart_date):
-    origin_city_code = '2000000'
-    destination_city_code = '2064130'
-    date = '24.03.2020'
+
+    cities_codes = get_cities_codes(origin_city, destination_city)
+
+    tickets = []
+    for route in cities_codes:
+        print(route)
+        finded_tickets = get_tickets(route, depart_date)
+        if finded_tickets is not None:
+            tickets += finded_tickets
+    return tickets
+
+def get_tickets(route, depart_date):
+
+    origin_city_id = route.get('departure_station_id')
+    destination_city_id = route.get('arrival_station_id')
+
     trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
 
     params = {
-        'nnst1' : origin_city_code,
-        'nnst2' : destination_city_code,
-        'date' : date
+        'nnst1' : origin_city_id,
+        'nnst2' : destination_city_id,
+        'date' : depart_date
     }
 
     session = HTMLSession()
@@ -62,16 +91,16 @@ def train_tickets_by_city(origin_city, destination_city, depart_date):
                 print(route_time.text)
                 ticket['time'] = route_time.text.replace('\xa0', '')
 
-                ticket['origin'] = origin_city
-                ticket['destination'] = destination_city
+                ticket['origin'] = route.get('departure_station_name')
+                ticket['destination'] = route.get('departure_station_name')
 
                 tickets.append(ticket)   
-    print(tickets)
+   # print(tickets)
     return tickets
     
 def write_file(result_file, text):
     with open(result_file, 'w', encoding='utf-8') as output:
-            output.write(text)
+        output.write(text)
 
 def train_tickets_by_city_api(origin_city, destination_city, depart_date, return_date):
 
@@ -101,7 +130,8 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date='2020.03.21'
-    return_date='2020-03-22'
+    depart_date='24.03.2020'
+    return_date='2020.03.22'
     
-    train_tickets_by_city(origin_city, destination_city, depart_date)
+    #print(get_cities_codes(origin_city, destination_city))
+    print(train_tickets_by_city(origin_city, destination_city, depart_date))
