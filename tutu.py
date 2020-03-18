@@ -1,14 +1,14 @@
 import requests
 import secrets
 import csv
-from requests_html import HTMLSession
+import json
+from bs4 import BeautifulSoup
 
-
-def get_html(url, params=0, header=0):
+def get_html(url, params=None, header=None):
     try:
         result = requests.get(url, params=params, headers=header)
         result.raise_for_status()
-        return result.content
+        return result.text
     except(requests.RequestException, ValueError):
         print('Сетевая ошибка')
         return False
@@ -36,15 +36,79 @@ def train_tickets_by_city(origin_city, destination_city, depart_date):
     tickets = []
     for route in cities_codes:
         print(route)
-        finded_tickets = get_tickets(route, depart_date)
-        if finded_tickets is not None:
-            tickets += finded_tickets
+        #### debug
+        #found_tickets = get_route('')
+        found_tickets = get_tickets(route, depart_date)
+        if found_tickets is not None:
+            tickets += found_tickets
+    return tickets
+
+def get_routes_in_json(html):
+    if html:
+        soup = BeautifulSoup(html, 'html.parser')
+        scripts_list = soup.findAll('script')
+        for script in scripts_list:
+            # print(script.text)
+            script_text = script.text
+            script_text = script_text.strip()
+            if script_text.startswith('window.params = {'):
+                script_text = script_text.lstrip('window.params = ')
+
+                script_text = script_text[0:script_text.find('window.langLabels')]
+                script_text = script_text.strip()
+                script_text = script_text.rstrip(';')
+
+                #write_file('data/test.json', script_text)
+                json_result = json.loads(script_text)
+            
+                return json_result
+    else:
+        return None
+
+def get_route(data):
+    tickets = []
+
+    #data = None
+    #with open("data/test.json", "r") as read_file:
+    #    data = json.load(read_file)
+
+    componentData = data['componentData']
+    resultsList = componentData['searchResultList']
+    for result in resultsList:
+        trains = result['trains']
+        for train in trains:
+            
+            run = train['params']['run']
+            trip = train['params']['trip']
+            seats = train['params']['withSeats']
+            for seat in seats['categories']:
+                params = seat['params']
+                ticket = {}
+                ticket['seat_type'] = params['name']
+                ticket['seats_count'] = params['seatsCount']
+                ticket['price'] = params['price']['RUB']
+                ticket['top_seats_price'] = params['topSeatsPrice']
+                ticket['top_seats_count'] = params['topSeatsCount']
+                ticket['bottom_seats_price'] = params['bottomSeatsPrice']
+                ticket['bottom_seats_count'] = params['bottomSeatsCount']
+                
+                ticket['url'] = seats['buyAbsUrl']
+
+                ticket['number'] = trip['trainNumber']
+                ticket['origin'] = trip['departureStation']
+                ticket['destination'] = trip['arrivalStation']
+                ticket['departure_at'] = trip['departureDate'] + ' ' + trip['departureTime']
+                ticket['return_at'] = trip['arrivalDate'] + ' ' + trip['arrivalTime']
+                ticket['travel_time'] = trip['travelTimeSeconds']
+
+
+                tickets.append(ticket) 
     return tickets
 
 def get_tickets(route, depart_date):
 
-    origin_city_id = route.get('departure_station_id')
-    destination_city_id = route.get('arrival_station_id')
+    origin_city_id = route['departure_station_id']
+    destination_city_id = route['arrival_station_id']
 
     trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
 
@@ -54,58 +118,22 @@ def get_tickets(route, depart_date):
         'date' : depart_date
     }
 
-    session = HTMLSession()
-    r = session.get(trains_url, params=params)
-    r.html.render()
+    headers = {"Accept-Language": "en-US,en;q=0.5"}
+    html = get_html(trains_url, params = params, header = headers)
+    #write_file('data/new_test.html', html)
 
-    path_to_train_cards = "//div[contains(@class, 'b-train__schedule__train_card')]"
-    train_number_path = ".//span[contains(@class, 'train_number_link')]"
-    route_time_path = ".//span[contains(@class, 't-txt-s route_time')]"
-    card_seats_path = ".//div/div/div/a/div/div/span[contains(@class, 'car-type') or contains(@class, 'car_type')]"
-    price_path = ".//div/div/div/a/div/div/span[contains(@class, 't-ttl_third') or contains(@class, 'seats_price t-txt-s')]"
-    tickets = []
-    for train_card_element in r.html.xpath(path_to_train_cards):
-        ticket = {}
-        card_seats = train_card_element.xpath(card_seats_path)
-        if len(card_seats) > 0:
-            i = 0
-            for card_seat in card_seats:
-                print(card_seat.text)
-                ticket['type'] = 'train'
-                ticket['seat'] = card_seat.text
-                price = train_card_element.xpath(price_path)[i]
-                if price is not None:
-                    print(price.text)
-                    price_text = price.text.replace('\xa0', '')
-                    price_text = price_text.replace('₽', '')
-                    ticket['price'] = price_text
-                else:
-                    print(0)
-                    ticket['price'] = None
-                i += 1
+    routes_in_json = get_routes_in_json(html)
+    tickets = get_route(routes_in_json)
 
-                train_number = train_card_element.xpath(train_number_path, first=True)
-                print(train_number.text)
-                ticket['number'] = train_number.text
-                route_time = train_card_element.xpath(route_time_path, first=True)
-                print(route_time.text)
-                ticket['time'] = route_time.text.replace('\xa0', '')
-
-                ticket['origin'] = route.get('departure_station_name')
-                ticket['destination'] = route.get('departure_station_name')
-
-                tickets.append(ticket)   
-   # print(tickets)
     return tickets
     
 def write_file(result_file, text):
     with open(result_file, 'w', encoding='utf-8') as output:
         output.write(text)
 
+
 def train_tickets_by_city_api(origin_city, destination_city, depart_date, return_date):
 
-    origin_city = '2000000'
-    destination_city = '2064130'
     trains_url = 'https://suggest.travelpayouts.com/search'
 
     params = {
@@ -130,8 +158,7 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date='24.03.2020'
-    return_date='2020.03.22'
+    depart_date='28.03.2020'
     
     #print(get_cities_codes(origin_city, destination_city))
     print(train_tickets_by_city(origin_city, destination_city, depart_date))
