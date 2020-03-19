@@ -82,24 +82,25 @@ def get_route(data):
             trip = train['params']['trip']
             seats = train['params']['withSeats']
             for seat in seats['categories']:
-                params = seat['params']
-                ticket = {}
-                ticket['seat_type'] = params['name']
-                ticket['seats_count'] = params['seatsCount']
-                ticket['price'] = params['price']['RUB']
-                ticket['top_seats_price'] = params['topSeatsPrice']
-                ticket['top_seats_count'] = params['topSeatsCount']
-                ticket['bottom_seats_price'] = params['bottomSeatsPrice']
-                ticket['bottom_seats_count'] = params['bottomSeatsCount']
-                
-                ticket['url'] = seats['buyAbsUrl']
+                if seat['type'] == 'prices':
+                    params = seat['params']
+                    ticket = {}
+                    ticket['seat_type'] = params['name']
+                    ticket['seats_count'] = params['seatsCount']
+                    ticket['price'] = params['price']['RUB']
+                    ticket['top_seats_price'] = params['topSeatsPrice']
+                    ticket['top_seats_count'] = params['topSeatsCount']
+                    ticket['bottom_seats_price'] = params['bottomSeatsPrice']
+                    ticket['bottom_seats_count'] = params['bottomSeatsCount']
+                    
+                    ticket['url'] = seats['buyAbsUrl']
 
-                ticket['number'] = trip['trainNumber']
-                ticket['origin'] = trip['departureStation']
-                ticket['destination'] = trip['arrivalStation']
-                ticket['departure_at'] = trip['departureDate'] + ' ' + trip['departureTime']
-                ticket['return_at'] = trip['arrivalDate'] + ' ' + trip['arrivalTime']
-                ticket['travel_time'] = trip['travelTimeSeconds']
+                    ticket['number'] = trip['trainNumber']
+                    ticket['origin'] = trip['departureStation']
+                    ticket['destination'] = trip['arrivalStation']
+                    ticket['departure_at'] = trip['departureDate'] + ' ' + trip['departureTime']
+                    ticket['return_at'] = trip['arrivalDate'] + ' ' + trip['arrivalTime']
+                    ticket['travel_time'] = trip['travelTimeSeconds']
 
 
                 tickets.append(ticket) 
