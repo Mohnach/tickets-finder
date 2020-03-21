@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, time, datetime
 from decimal import Decimal
 
@@ -7,8 +7,8 @@ class RouteInfo:
     origin_city: str = ''
     destination_city: str = ''
     route_type: str = ''
-    depart_datetime: datetime = datetime.now()
-    arrival_datetime: datetime = datetime.now()
+    depart_datetime: datetime = field(default_factory = lambda: datetime.now())
+    arrival_datetime: datetime = field(default_factory = lambda: datetime.now())
     price: Decimal = Decimal('0')
 
     @property
