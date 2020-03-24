@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, time, datetime
 from decimal import Decimal
 from typing import Optional
@@ -12,6 +12,7 @@ class RouteInfo:
     arrival_datetime: Optional[datetime] = None
     return_datetime: Optional[datetime] = None
     price: Decimal = Decimal('0')
+    obtained_datetime: datetime = field(default_factory = lambda: datetime.now())
 
     @property
     def depart_date(self) -> Optional[date]:
