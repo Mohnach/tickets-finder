@@ -77,7 +77,7 @@ class Aviasales(TicketProvider):
         return None
 
 
-    def get_return_tickets(self, origin : str, destination : str, depart_date : datetime, return_date : datetime) -> List[RouteInfo]:
+    def get_return_tickets(self, origin_city : str, destination_city : str, depart_date : datetime, return_date : datetime) -> List[RouteInfo]:
         iatas = self.convert_city_name_to_iata(origin_city, destination_city)
 
         try:

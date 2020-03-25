@@ -13,7 +13,7 @@ class Tutu(TicketProvider):
 
     trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
 
-    def get_tickets(self, origin : str, destination : str, depart_date : datetime) -> List[RouteInfo]:
+    def get_tickets(self, origin_city : str, destination_city : str, depart_date : datetime) -> List[RouteInfo]:
         routes = self.find_routes(origin_city, destination_city)
 
         tickets = []
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date = datetime.strptime('30.03.2020', '%d.%m.%Y')
+    depart_date = datetime.strptime('30.04.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
  #   t = TutuInfo()
