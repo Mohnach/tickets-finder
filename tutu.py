@@ -262,7 +262,7 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date = datetime.strptime('30.03.2020', '%d.%m.%Y')
+    depart_date = datetime.strptime('30.04.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
  #   print( depart_date >= (datetime.now() - timedelta(days=1)) )
