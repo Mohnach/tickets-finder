@@ -36,7 +36,7 @@ class Tutu(TicketProvider):
                         TutuCache.__table__.create(self.engine)
 
 
-                    mapper(TutuInfo, TutuCache.__table__, properties={
+                    self.my_maper = mapper(TutuInfo, TutuCache.__table__, properties={
                         'seat_type': TutuCache.__table__.c.seat_type,
                         'seats_count': TutuCache.__table__.c.seats_count,
                         'top_seats_price': TutuCache.__table__.c.top_seats_price,
@@ -50,7 +50,7 @@ class Tutu(TicketProvider):
                     self.session = Session(bind=self.engine)
                 else:
 
-                    tickets = self.session.query(TutuCache.__table__).\
+                    tickets = self.session.query(self.my_maper).\
                         filter(TutuCache.destination_city == destination_city_id,
                         TutuCache.origin_city == origin_city_id)
 
