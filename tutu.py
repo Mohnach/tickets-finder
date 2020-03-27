@@ -2,7 +2,7 @@ import requests
 import csv
 import json
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from TicketProvider import TicketProvider
 from RouteInfo import RouteInfo
 from dataclasses import dataclass
@@ -14,11 +14,10 @@ from sqlalchemy.orm import Session, mapper
 import os
 
 class Tutu(TicketProvider):
-    def use_cache(fun):
+    def use_cache(func):
         def wrapped(self, route, depart_date):
-            print('DECORATOR')
             if self._use_cache == False:
-                return fun(self, route, depart_date)
+                return func(self, route, depart_date)
             else:
                 # если есть база, то ищем билеты
                 #  если нашли, возвращаем,
@@ -52,19 +51,19 @@ class Tutu(TicketProvider):
 
                     tickets = self.session.query(self.my_maper).\
                         filter(TutuCache.destination_city == destination_city_id,
-                        TutuCache.origin_city == origin_city_id)
+                        TutuCache.origin_city == origin_city_id,
+                        TutuCache.obtained_datetime >= (datetime.now() - timedelta(days=1)))
 
                     if tickets:
                         return tickets
-                tickets = fun(self, route, depart_date)
+                tickets = func(self, route, depart_date)
                 for ticket in tickets:
                     self.session.add(ticket)
                     self.session.commit()
         return wrapped
 
-    trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
-
     def get_tickets(self, origin : str, destination : str, depart_date : datetime) -> List[RouteInfo]:
+        self.read_csv_to_dict()
         routes = self.find_routes(origin_city, destination_city)
 
         tickets = []
@@ -79,7 +78,36 @@ class Tutu(TicketProvider):
                             return_date : datetime) -> List[RouteInfo]:
         pass
 
+    # читаем csv в переменную routes_dict
+    # ключ - id станции. value - лист со строками csv для этого города (в формате ordered dict)
+    def read_csv_to_dict(self):
+        self.routes_dict = {}
+        with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
+            fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
+            reader = csv.DictReader(f, fields, delimiter=';')
+            for row in reader:
+                if row['departure_station_name'] not in self.routes_dict:
+                    self.routes_dict[row['departure_station_name']] = []
+                self.routes_dict[row['departure_station_name']].append(row)
+    
     def find_routes(self, origin_city, destination_city):
+        routes = []
+        # if origin_city in self.routes_dict:
+        for key in self.routes_dict:
+            if origin_city in key:
+                for route_for_city in self.routes_dict[key]:
+                    #print(route_for_city['arrival_station_name'])
+                    if route_for_city['arrival_station_name'] == destination_city:
+                        # route = {}
+                        # route['departure_station_name'] = route_for_city['departure_station_name']
+                        # route['departure_station_id'] = route_for_city['departure_station_id']
+                        # route['arrival_station_name'] = route_for_city['arrival_station_name']
+                        # route['arrival_station_id'] = route_for_city['arrival_station_id']
+                        routes.append(route_for_city)
+        return routes
+
+    # deprecated
+    def find_routes_from_file(self, origin_city, destination_city):
         with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
             fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
             reader = csv.DictReader(f, fields, delimiter=';')
@@ -107,8 +135,10 @@ class Tutu(TicketProvider):
             'date' : depart_date.strftime('%d.%m.%Y')
         }
 
+        trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
+
         headers = {"Accept-Language": "en-US,en;q=0.5"}
-        html = self.get_html(self.trains_url, params = params, header = headers)
+        html = self.get_html(trains_url, params = params, header = headers)
         #write_file('data/new_test.html', html)
 
         routes_in_json = self.get_routes_in_json(html)
@@ -235,8 +265,12 @@ if __name__ == "__main__":
     depart_date = datetime.strptime('30.03.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
+ #   print( depart_date >= (datetime.now() - timedelta(days=1)) )
+
  #   t = TutuInfo()
  #   print(t)
 
     #print(get_cities_codes(origin_city, destination_city))
     print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
+   # tutu_parser.read_csv_to_dict()
+   # tutu_parser.find_routes(origin_city, destination_city)
