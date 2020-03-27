@@ -1,12 +1,18 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, DECIMAL
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import as_declarative
+from sqlalchemy.ext.declarative import declared_attr
 
-Base = declarative_base()
+@as_declarative()
+class Base(object):
 
-class TutuCache(Base):
-    __tablename__ = 'tutu_cache'
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
 
     id = Column(Integer, primary_key=True)
+
+class TutuCache(Base):
+    # fields from RouteInfo
     route_type = Column(String)
     origin_city = Column(String)
     destination_city = Column(String)
@@ -16,6 +22,7 @@ class TutuCache(Base):
     price = Column(DECIMAL)
     obtained_datetime = Column(DateTime)
 
+    # fields from TutuInfo
     seat_type = Column(String)
     seats_count = Column(Integer)
     top_seats_price = Column(DECIMAL)
@@ -27,10 +34,9 @@ class TutuCache(Base):
     travel_time = Column(Integer)
 
     def __repr__(self):
-            return f'<id {self.id} name {self.origin_city}>'
+        return f'<{self.__class__}. id: {self.id}. Origin city: {self.origin_city}. Destination city: {self.destination_city}>'
 
 
 if __name__ == "__main__":
-    user1 = TutuCache(origin_city="Вася")
-    #print("User1 columns: " + str(user1.__table__.c.items()))
-    print(user1)
+    test = TutuCache(origin_city="Default")
+    print(test)
