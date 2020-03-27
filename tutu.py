@@ -8,8 +8,59 @@ from RouteInfo import RouteInfo
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
+from model import Base, TutuCache
+from sqlalchemy import create_engine, Table
+from sqlalchemy.orm import Session, mapper
+import os
 
 class Tutu(TicketProvider):
+    def use_cache(fun):
+        def wrapped(self, route, depart_date):
+            print('DECORATOR')
+            if self._use_cache == False:
+                return fun(self, route, depart_date)
+            else:
+                # если есть база, то ищем билеты
+                #  если нашли, возвращаем,
+                #  если не нашли - идем на сайт
+                origin_city_id = route['departure_station_id']
+                destination_city_id = route['arrival_station_id']
+                if not self.engine:
+                    basedir = os.path.abspath(os.path.dirname(__file__))
+                    base_file = os.path.join(basedir, 'data', 'test.db')
+                    base_uri = 'sqlite:///' + base_file
+
+                    self.engine = create_engine(base_uri)
+                    #Base.metadata.create_all(engine)
+                    if not os.path.exists(base_file):
+                        TutuCache.__table__.create(self.engine)
+
+
+                    mapper(TutuInfo, TutuCache.__table__, properties={
+                        'seat_type': TutuCache.__table__.c.seat_type,
+                        'seats_count': TutuCache.__table__.c.seats_count,
+                        'top_seats_price': TutuCache.__table__.c.top_seats_price,
+                        'top_seats_count': TutuCache.__table__.c.top_seats_count,
+                        'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
+                        'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
+                        'url': TutuCache.__table__.c.url,
+                        'number': TutuCache.__table__.c.number,
+                        'travel_time': TutuCache.__table__.c.travel_time
+                    })
+                    self.session = Session(bind=self.engine)
+                else:
+
+                    tickets = self.session.query(TutuCache.__table__).\
+                        filter(TutuCache.destination_city == destination_city_id,
+                        TutuCache.origin_city == origin_city_id)
+
+                    if tickets:
+                        return tickets
+                tickets = fun(self, route, depart_date)
+                for ticket in tickets:
+                    self.session.add(ticket)
+                    self.session.commit()
+        return wrapped
 
     trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
 
@@ -44,6 +95,7 @@ class Tutu(TicketProvider):
                     routes.append(route)
             return routes
 
+    @use_cache
     def get_tickets_for_two_cities(self, route, depart_date):
 
         origin_city_id = route['departure_station_id']
@@ -132,7 +184,7 @@ class Tutu(TicketProvider):
                         ticket.arrival_datetime = datetime.strptime( arrival_date_str, '%Y-%m-%d %H:%M:%S' )
                         ticket.travel_time = trip['travelTimeSeconds']
 
-                        tickets.append(ticket) 
+                        tickets.append(ticket)
         return tickets
 
     def write_file(self, result_file, text):

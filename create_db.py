@@ -1,6 +1,6 @@
 from model import Base, TutuCache
 from sqlalchemy import create_engine, Table
-from sqlalchemy.orm import Session, Mapper
+from sqlalchemy.orm import Session, mapper
 import os
 from tutu import TutuInfo
 from datetime import datetime
@@ -15,7 +15,17 @@ if not os.path.exists(base_file):
     TutuCache.__table__.create(engine)
 
 
-Mapper(TutuInfo, TutuCache.__table__)
+mapper(TutuInfo, TutuCache.__table__, properties={
+    'seat_type': TutuCache.__table__.c.seat_type,
+    'seats_count': TutuCache.__table__.c.seats_count,
+    'top_seats_price': TutuCache.__table__.c.top_seats_price,
+    'top_seats_count': TutuCache.__table__.c.top_seats_count,
+    'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
+    'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
+    'url': TutuCache.__table__.c.url,
+    'number': TutuCache.__table__.c.number,
+    'travel_time': TutuCache.__table__.c.travel_time
+})
 session = Session(bind=engine)
 
 
@@ -27,6 +37,7 @@ test_ticket = TutuInfo(origin_city='Madrid',
     return_datetime=datetime.now(),
     price=0,
     seat_type='lux')
+    
 session.add(test_ticket)
 session.commit()
 

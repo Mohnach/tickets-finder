@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 class TutuCache(Base):
-    __tablename__ = 'tutu cache'
+    __tablename__ = 'tutu_cache'
 
     id = Column(Integer, primary_key=True)
     route_type = Column(String)
