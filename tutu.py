@@ -14,55 +14,8 @@ from sqlalchemy.orm import Session, mapper
 import os
 
 class Tutu(TicketProvider):
-    def use_cache(func):
-        def wrapped(self, route, depart_date):
-            if self._use_cache == False:
-                return func(self, route, depart_date)
-            else:
-                # если есть база, то ищем билеты
-                #  если нашли, возвращаем,
-                #  если не нашли - идем на сайт
-                origin_city_id = route['departure_station_id']
-                destination_city_id = route['arrival_station_id']
-                if not self.engine:
-                    basedir = os.path.abspath(os.path.dirname(__file__))
-                    base_file = os.path.join(basedir, 'data', 'test.db')
-                    base_uri = 'sqlite:///' + base_file
 
-                    self.engine = create_engine(base_uri)
-                    #Base.metadata.create_all(engine)
-                    if not os.path.exists(base_file):
-                        TutuCache.__table__.create(self.engine)
-
-
-                    self.my_maper = mapper(TutuInfo, TutuCache.__table__, properties={
-                        'seat_type': TutuCache.__table__.c.seat_type,
-                        'seats_count': TutuCache.__table__.c.seats_count,
-                        'top_seats_price': TutuCache.__table__.c.top_seats_price,
-                        'top_seats_count': TutuCache.__table__.c.top_seats_count,
-                        'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
-                        'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
-                        'url': TutuCache.__table__.c.url,
-                        'number': TutuCache.__table__.c.number,
-                        'travel_time': TutuCache.__table__.c.travel_time
-                    })
-                    self.session = Session(bind=self.engine)
-                else:
-
-                    tickets = self.session.query(self.my_maper).\
-                        filter(TutuCache.destination_city == destination_city_id,
-                        TutuCache.origin_city == origin_city_id,
-                        TutuCache.obtained_datetime >= (datetime.now() - timedelta(days=1)))
-
-                    if tickets:
-                        return tickets
-                tickets = func(self, route, depart_date)
-                for ticket in tickets:
-                    self.session.add(ticket)
-                    self.session.commit()
-        return wrapped
-
-    def get_tickets(self, origin : str, destination : str, depart_date : datetime) -> List[RouteInfo]:
+    def get_tickets(self, origin_city : str, destination_city : str, depart_date : datetime) -> List[RouteInfo]:
         self.read_csv_to_dict()
         routes = self.find_routes(origin_city, destination_city)
 
@@ -78,32 +31,108 @@ class Tutu(TicketProvider):
                             return_date : datetime) -> List[RouteInfo]:
         pass
 
+    def use_cache(func):
+        def wrapped(self, route, depart_date, use_cache = True):
+            if use_cache == False:
+                return func(self, route, depart_date)
+            else:
+                # если есть база, то ищем билеты
+                #  если нашли, возвращаем,
+                #  если не нашли - идем на сайт
+                origin_city_id = route['departure_station_id']
+                destination_city_id = route['arrival_station_id']
+                
+                try:
+                    if not self.engine:
+                        basedir = os.path.abspath(os.path.dirname(__file__))
+                        base_file = os.path.join(basedir, 'data', 'test.db')
+                        base_uri = 'sqlite:///' + base_file
+
+                        self.engine = create_engine(base_uri)
+                        #Base.metadata.create_all(engine)
+                        if not os.path.exists(base_file):
+                            TutuCache.__table__.create(self.engine)
+
+
+                        self.my_maper = mapper(TutuInfo, TutuCache.__table__, properties={
+                            'seat_type': TutuCache.__table__.c.seat_type,
+                            'seats_count': TutuCache.__table__.c.seats_count,
+                            'top_seats_price': TutuCache.__table__.c.top_seats_price,
+                            'top_seats_count': TutuCache.__table__.c.top_seats_count,
+                            'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
+                            'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
+                            'url': TutuCache.__table__.c.url,
+                            'number': TutuCache.__table__.c.number,
+                            'travel_time': TutuCache.__table__.c.travel_time
+                        })
+                        self.session = Session(bind=self.engine)
+
+
+                    tickets = self.session.query(self.my_maper).\
+                        filter(TutuCache.destination_city == destination_city_id,
+                        TutuCache.origin_city == origin_city_id,
+                        TutuCache.depart_datetime == depart_date)
+
+                    tutu_info_list = list(tickets)
+                    for ticket in tutu_info_list:
+                        if (datetime.now() - ticket.obtained_datetime).days > 1:
+                            self.session.delete(ticket)
+                            self.session.commit()
+                            tutu_info_list.remove(ticket)
+                
+                    if tutu_info_list:
+                        return tutu_info_list
+                except SQLAlchemyError:
+                    print('ошибка при работе с кэшем')
+
+                tickets = func(self, route, depart_date)
+
+                try:
+                    for ticket in tickets:
+                        self.session.add(ticket)
+                        self.session.commit()
+                except SQLAlchemyError:
+                    print('ошибка записи в кэш')
+
+                return tickets
+        return wrapped
+
+
     # читаем csv в переменную routes_dict
     # ключ - id станции. value - лист со строками csv для этого города (в формате ordered dict)
     def read_csv_to_dict(self):
         self.routes_dict = {}
-        with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
-            fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
-            reader = csv.DictReader(f, fields, delimiter=';')
-            for row in reader:
-                if row['departure_station_name'] not in self.routes_dict:
-                    self.routes_dict[row['departure_station_name']] = []
-                self.routes_dict[row['departure_station_name']].append(row)
+        try:
+            with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
+                fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
+                reader = csv.DictReader(f, fields, delimiter=';')
+                for row in reader:
+                    if row['departure_station_name'] not in self.routes_dict:
+                        self.routes_dict[row['departure_station_name']] = []
+                    self.routes_dict[row['departure_station_name']].append(row)
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.routes_dict = {}
     
     def find_routes(self, origin_city, destination_city):
         routes = []
         # if origin_city in self.routes_dict:
-        for key in self.routes_dict:
-            if origin_city in key:
-                for route_for_city in self.routes_dict[key]:
-                    #print(route_for_city['arrival_station_name'])
-                    if route_for_city['arrival_station_name'] == destination_city:
-                        # route = {}
-                        # route['departure_station_name'] = route_for_city['departure_station_name']
-                        # route['departure_station_id'] = route_for_city['departure_station_id']
-                        # route['arrival_station_name'] = route_for_city['arrival_station_name']
-                        # route['arrival_station_id'] = route_for_city['arrival_station_id']
-                        routes.append(route_for_city)
+        try:
+            for key in self.routes_dict:
+                if origin_city in key:
+                    for route_for_city in self.routes_dict[key]:
+                        #print(route_for_city['arrival_station_name'])
+                        if route_for_city['arrival_station_name'] == destination_city:
+                            # route = {}
+                            # route['departure_station_name'] = route_for_city['departure_station_name']
+                            # route['departure_station_id'] = route_for_city['departure_station_id']
+                            # route['arrival_station_name'] = route_for_city['arrival_station_name']
+                            # route['arrival_station_id'] = route_for_city['arrival_station_id']
+                            routes.append(route_for_city)
+        except (ValueError, KeyError) as e:
+            print(f'error in routes_dict. {repr(e)}')
         return routes
 
     # deprecated
@@ -153,73 +182,82 @@ class Tutu(TicketProvider):
             return result.text
         except(requests.RequestException, ValueError):
             print('Сетевая ошибка')
-            return False
+            return None
 
     def get_routes_in_json(self, html):
-        if html:
-            soup = BeautifulSoup(html, 'html.parser')
-            scripts_list = soup.findAll('script')
-            for script in scripts_list:
-                # print(script.text)
-                script_text = script.text
-                script_text = script_text.strip()
-                if script_text.startswith('window.params = {'):
-                    script_text = script_text.lstrip('window.params = ')
-
-                    script_text = script_text[0:script_text.find('window.langLabels')]
+        try:
+            if html:
+                soup = BeautifulSoup(html, 'html.parser')
+                scripts_list = soup.findAll('script')
+                for script in scripts_list:
+                    # print(script.text)
+                    script_text = script.text
                     script_text = script_text.strip()
-                    script_text = script_text.rstrip(';')
+                    if script_text.startswith('window.params = {'):
+                        script_text = script_text.lstrip('window.params = ')
 
-                    #write_file('data/test.json', script_text)
-                    json_result = json.loads(script_text)
-                
-                    return json_result
-        else:
-            return None
+                        script_text = script_text[0:script_text.find('window.langLabels')]
+                        script_text = script_text.strip()
+                        script_text = script_text.rstrip(';')
+
+                        #write_file('data/test.json', script_text)
+                        json_result = json.loads(script_text)
+                    
+                        return json_result
+        except ValueError as e:
+            print(f'ошибка при парсинге html. {repr(e)}')
+        return None
 
     def get_tickets_from_json(self, data):
         tickets = []
 
-        componentData = data['componentData']
-        resultsList = componentData['searchResultList']
-        for result in resultsList:
-            trains = result['trains']
-            for train in trains:
-                
-                run = train['params']['run']
-                trip = train['params']['trip']
-                seats = train['params']['withSeats']
-                for seat in seats['categories']:
-                    if seat['type'] == 'prices':
-                        params = seat['params']
-                        ticket = TutuInfo()
-                        ticket.route_type = 'train'
+        try:
+            componentData = data['componentData']
+            resultsList = componentData['searchResultList']
+            for result in resultsList:
+                trains = result['trains']
+                for train in trains:
+                    
+                    run = train['params']['run']
+                    trip = train['params']['trip']
+                    seats = train['params']['withSeats']
+                    for seat in seats['categories']:
+                        if seat['type'] == 'prices':
+                            params = seat['params']
+                            ticket = TutuInfo()
+                            ticket.route_type = 'train'
 
-                        ticket.seat_type = params['name']
-                        ticket.seats_count = params['seatsCount']
-                        ticket.price = params['price']['RUB']
-                        ticket.top_seats_price = params['topSeatsPrice']
-                        ticket.top_seats_count = params['topSeatsCount']
-                        ticket.bottom_seats_price = params['bottomSeatsPrice']
-                        ticket.bottom_seats_count = params['bottomSeatsCount']
-                        
-                        ticket.url = seats['buyAbsUrl']
+                            ticket.seat_type = params['name']
+                            ticket.seats_count = params['seatsCount']
+                            ticket.price = params['price']['RUB']
+                            ticket.top_seats_price = params['topSeatsPrice']
+                            ticket.top_seats_count = params['topSeatsCount']
+                            ticket.bottom_seats_price = params['bottomSeatsPrice']
+                            ticket.bottom_seats_count = params['bottomSeatsCount']
+                            
+                            ticket.url = seats['buyAbsUrl']
 
-                        ticket.number = trip['trainNumber']
-                        ticket.origin_city = trip['departureStation']
-                        ticket.destination_city = trip['arrivalStation']
-                        depart_date_str = trip['departureDate'] + ' ' + trip['departureTime']
-                        ticket.depart_datetime = datetime.strptime( depart_date_str, '%Y-%m-%d %H:%M:%S' )
-                        arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
-                        ticket.arrival_datetime = datetime.strptime( arrival_date_str, '%Y-%m-%d %H:%M:%S' )
-                        ticket.travel_time = trip['travelTimeSeconds']
+                            ticket.number = trip['trainNumber']
+                            ticket.origin_city = trip['departureStation']
+                            ticket.destination_city = trip['arrivalStation']
+                            depart_date_str = trip['departureDate'] + ' ' + trip['departureTime']
+                            ticket.depart_datetime = datetime.strptime( depart_date_str, '%Y-%m-%d %H:%M:%S' )
+                            arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
+                            ticket.arrival_datetime = datetime.strptime( arrival_date_str, '%Y-%m-%d %H:%M:%S' )
+                            ticket.travel_time = trip['travelTimeSeconds']
 
-                        tickets.append(ticket)
+                            tickets.append(ticket)
+        except (ValueError, KeyError) as e:
+            print(f'ошибка при парсинге json. {repr(e)}')
+
         return tickets
 
     def write_file(self, result_file, text):
-        with open(result_file, 'w', encoding='utf-8') as output:
-            output.write(text)
+        try:
+            with open(result_file, 'w', encoding='utf-8') as output:
+                output.write(text)
+        except OSError as e:
+            print(f'не удалось открыть файл. {repr(e)}')
 
     # Deprecated
     def train_tickets_by_api(self, origin_city, destination_city, depart_date, return_date):
@@ -262,7 +300,7 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date = datetime.strptime('30.04.2020', '%d.%m.%Y')
+    depart_date = datetime.strptime('30.03.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
  #   print( depart_date >= (datetime.now() - timedelta(days=1)) )
