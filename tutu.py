@@ -185,8 +185,11 @@ class Tutu(TicketProvider):
         }
 
         trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
-
-        headers = {"Accept-Language": "en-US,en;q=0.5"}
+        user_agent = self.get_random_user_agent()
+        headers = {
+            "Accept-Language": "en-US,en;q=0.5",
+            'User-Agent': user_agent
+            }
         html = self.get_html(trains_url, params=params, header=headers)
         # write_file('data/new_test.html', html)
 
@@ -291,7 +294,12 @@ class Tutu(TicketProvider):
             'callback': 'plazcard'
         }
 
-        headers = {"Accept-Language": "en-US,en;q=0.5"}
+        user_agent = self.get_random_user_agent()
+
+        headers = {
+            "Accept-Language": "en-US,en;q=0.5",
+            'User-Agent': user_agent
+            }
         try:
             result = requests.get(trains_url, params=params, headers=headers)
             result.raise_for_status()
@@ -301,6 +309,7 @@ class Tutu(TicketProvider):
         except (requests.RequestException, ValueError):
             print('exception')
         return None
+
 
 # информация о маршруте на поезде
 @dataclass
@@ -323,5 +332,5 @@ if __name__ == "__main__":
     depart_date = datetime.strptime('10.04.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
-    print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
-    # print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
+    tutu_parser.get_tickets(origin_city, destination_city, depart_date)
+    tutu_parser.get_tickets(origin_city, destination_city, depart_date)
