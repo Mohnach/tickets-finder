@@ -112,22 +112,23 @@ class Aviasales(TicketProvider):
         tickets = []
         tickets_list = data.get(destination_iata)
         
-        for ticket_key in tickets_list:
-            ticket_value = tickets_list.get(ticket_key)
-            ticket = AviasalesInfo()
-            ticket.route_type = 'plane'
-            ticket.origin_city = origin_city
-            ticket.destination_city = destination_city
-            ticket.number = ticket_value.get('flight_number')
-            ticket.airline = ticket_value.get('airline')
-            ticket.price = Decimal(ticket_value.get('price'))
-            depart_str = ticket_value.get('departure_at')
-            ticket.depart_datetime = datetime.strptime( depart_str, '%Y-%m-%dT%H:%M:%SZ' )
+        if tickets_list:
+            for ticket_key in tickets_list:
+                ticket_value = tickets_list.get(ticket_key)
+                ticket = AviasalesInfo()
+                ticket.route_type = 'plane'
+                ticket.origin_city = origin_city
+                ticket.destination_city = destination_city
+                ticket.number = ticket_value.get('flight_number')
+                ticket.airline = ticket_value.get('airline')
+                ticket.price = Decimal(ticket_value.get('price'))
+                depart_str = ticket_value.get('departure_at')
+                ticket.depart_datetime = datetime.strptime( depart_str, '%Y-%m-%dT%H:%M:%SZ' )
 
-            return_str = ticket_value.get('return_at')
-            ticket.return_datetime = datetime.strptime( return_str, '%Y-%m-%dT%H:%M:%SZ' )
+                return_str = ticket_value.get('return_at')
+                ticket.return_datetime = datetime.strptime( return_str, '%Y-%m-%dT%H:%M:%SZ' )
 
-            tickets.append(ticket)
+                tickets.append(ticket)
 
         return tickets
 
