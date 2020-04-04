@@ -9,14 +9,17 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
 from model import Base, TutuCache
-from sqlalchemy import create_engine, Table
+from sqlalchemy import create_engine, exc, Table
 from sqlalchemy.orm import Session, mapper
 import os
 
 class Tutu(TicketProvider):
 
-    def get_tickets(self, origin_city : str, destination_city : str, depart_date : datetime) -> List[RouteInfo]:
+    def __init__(self):
         self.read_csv_to_dict()
+
+    def get_tickets(self, origin_city : str, destination_city : str, depart_date : datetime) -> List[RouteInfo]:
+        #self.read_csv_to_dict()
         routes = self.find_routes(origin_city, destination_city)
 
         tickets = []
@@ -82,7 +85,7 @@ class Tutu(TicketProvider):
                 
                     if tutu_info_list:
                         return tutu_info_list
-                except SQLAlchemyError:
+                except exc.SQLAlchemyError:
                     print('ошибка при работе с кэшем')
 
                 tickets = func(self, route, depart_date)
@@ -91,7 +94,7 @@ class Tutu(TicketProvider):
                     for ticket in tickets:
                         self.session.add(ticket)
                         self.session.commit()
-                except SQLAlchemyError:
+                except exc.SQLAlchemyError:
                     print('ошибка записи в кэш')
 
                 return tickets
@@ -300,7 +303,7 @@ if __name__ == "__main__":
     #city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
-    depart_date = datetime.strptime('30.03.2020', '%d.%m.%Y')
+    depart_date = datetime.strptime('10.04.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
  #   print( depart_date >= (datetime.now() - timedelta(days=1)) )
