@@ -8,10 +8,11 @@ from RouteInfo import RouteInfo
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
-from model import Base, TutuCache
-from sqlalchemy import create_engine, exc, Table
+from model import TutuCache
+from sqlalchemy import create_engine, exc
 from sqlalchemy.orm import Session, mapper
 import os
+
 
 class Tutu(TicketProvider):
 
@@ -19,9 +20,7 @@ class Tutu(TicketProvider):
         self.read_csv_to_dict()
         self.my_mapper = None
 
-
-    def get_tickets(self, origin_city : str, destination_city : str, depart_date : datetime) -> List[RouteInfo]:
-        #self.read_csv_to_dict()
+    def get_tickets(self, origin_city: str, destination_city: str, depart_date: datetime) -> List[RouteInfo]:
         routes = self.find_routes(origin_city, destination_city)
 
         tickets = []
@@ -30,15 +29,15 @@ class Tutu(TicketProvider):
             found_tickets = self.get_tickets_for_two_cities(route, depart_date)
             if found_tickets is not None:
                 tickets += found_tickets
-        return tickets 
+        return tickets
 
-    def get_return_tickets(self, origin : str, destination : str, depart_date : datetime,
-                            return_date : datetime) -> List[RouteInfo]:
+    def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
+                           return_date: datetime) -> List[RouteInfo]:
         pass
 
     def use_cache(func):
-        def wrapped(self, route, depart_date, use_cache = True):
-            if use_cache == False:
+        def wrapped(self, route, depart_date, use_cache=True):
+            if use_cache is False:
                 return func(self, route, depart_date)
             else:
                 # если есть база, то ищем билеты
@@ -46,21 +45,21 @@ class Tutu(TicketProvider):
                 #  если не нашли - идем на сайт
                 origin_city_id = route['departure_station_id']
                 destination_city_id = route['arrival_station_id']
-                
+
                 try:
                     if not self.engine:
-                        print( 'База не инициализирована!' )
-                        print( 'Создаем новую сессию...' )
+                        print('База не инициализирована!')
+                        print('Создаем новую сессию...')
                         basedir = os.path.abspath(os.path.dirname(__file__))
                         base_file = os.path.join(basedir, 'data', 'test.db')
                         base_uri = 'sqlite:///' + base_file
 
                         self.engine = create_engine(base_uri)
-                        #Base.metadata.create_all(engine)
+                        # Base.metadata.create_all(engine)
                         if not os.path.exists(base_file):
-                            print( 'Создаем новую базу!' )
+                            print('Создаем новую базу!')
                             TutuCache.__table__.create(self.engine)
-                        
+
                         self.session = Session(bind=self.engine)
 
                     if not self.my_mapper:
@@ -75,7 +74,7 @@ class Tutu(TicketProvider):
                             'number': TutuCache.__table__.c.number,
                             'travel_time': TutuCache.__table__.c.travel_time
                         })
-                    
+
                     next_day = depart_date + timedelta(days=1)
 
                     tickets = self.session.query(self.my_mapper).filter(
@@ -86,20 +85,20 @@ class Tutu(TicketProvider):
 
                     tutu_info_list = list(tickets)
                     for ticket in tutu_info_list:
-                        print( 'Роемся в выдаче из кэша' )
+                        print('Роемся в выдаче из кэша')
                         if (datetime.now() - ticket.obtained_datetime).days > 1:
-                            print( 'Удаляем старье' )
+                            print('Удаляем старье')
                             self.session.delete(ticket)
                             self.session.commit()
                             tutu_info_list.remove(ticket)
-                
+
                     if tutu_info_list:
-                        print( 'В кэше есть что-то актуальное! Берем' )
+                        print('В кэше есть что-то актуальное! Берем')
                         return tutu_info_list
                 except exc.SQLAlchemyError:
                     print('ошибка при работе с кэшем')
 
-                print( 'В кэше ничего не нашлось. Погнали на сайт' )
+                print('В кэше ничего не нашлось. Погнали на сайт')
                 tickets = func(self, route, depart_date)
 
                 try:
@@ -112,14 +111,16 @@ class Tutu(TicketProvider):
                 return tickets
         return wrapped
 
-
     # читаем csv в переменную routes_dict
     # ключ - id станции. value - лист со строками csv для этого города (в формате ordered dict)
     def read_csv_to_dict(self):
         self.routes_dict = {}
         try:
             with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
-                fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
+                fields = ['departure_station_id',
+                          'departure_station_name',
+                          'arrival_station_id',
+                          'arrival_station_name']
                 reader = csv.DictReader(f, fields, delimiter=';')
                 for row in reader:
                     if row['departure_station_name'] not in self.routes_dict:
@@ -130,7 +131,7 @@ class Tutu(TicketProvider):
         except (ValueError, KeyError) as e:
             print(e.text)
             self.routes_dict = {}
-    
+
     def find_routes(self, origin_city, destination_city):
         routes = []
         # if origin_city in self.routes_dict:
@@ -138,7 +139,7 @@ class Tutu(TicketProvider):
             for key in self.routes_dict:
                 if origin_city in key:
                     for route_for_city in self.routes_dict[key]:
-                        #print(route_for_city['arrival_station_name'])
+                        # print(route_for_city['arrival_station_name'])
                         if route_for_city['arrival_station_name'] == destination_city:
                             # route = {}
                             # route['departure_station_name'] = route_for_city['departure_station_name']
@@ -153,12 +154,16 @@ class Tutu(TicketProvider):
     # deprecated
     def find_routes_from_file(self, origin_city, destination_city):
         with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
-            fields = ['departure_station_id','departure_station_name','arrival_station_id','arrival_station_name']
+            fields = ['departure_station_id',
+                      'departure_station_name',
+                      'arrival_station_id',
+                      'arrival_station_name']
             reader = csv.DictReader(f, fields, delimiter=';')
 
             routes = []
             for row in reader:
-                if (origin_city in row.get('departure_station_name')) and (destination_city in row.get('arrival_station_name')):
+                if (origin_city in row.get('departure_station_name')) and\
+                   (destination_city in row.get('arrival_station_name')):
                     route = {}
                     route['departure_station_name'] = row.get('departure_station_name')
                     route['departure_station_id'] = row.get('departure_station_id')
@@ -174,16 +179,16 @@ class Tutu(TicketProvider):
         destination_city_id = route['arrival_station_id']
 
         params = {
-            'nnst1' : origin_city_id,
-            'nnst2' : destination_city_id,
-            'date' : depart_date.strftime('%d.%m.%Y')
+            'nnst1': origin_city_id,
+            'nnst2': destination_city_id,
+            'date': depart_date.strftime('%d.%m.%Y')
         }
 
         trains_url = 'https://www.tutu.ru/poezda/rasp_d.php'
 
         headers = {"Accept-Language": "en-US,en;q=0.5"}
-        html = self.get_html(trains_url, params = params, header = headers)
-        #write_file('data/new_test.html', html)
+        html = self.get_html(trains_url, params=params, header=headers)
+        # write_file('data/new_test.html', html)
 
         routes_in_json = self.get_routes_in_json(html)
         tickets = self.get_tickets_from_json(routes_in_json)
@@ -215,9 +220,9 @@ class Tutu(TicketProvider):
                         script_text = script_text.strip()
                         script_text = script_text.rstrip(';')
 
-                        #write_file('data/test.json', script_text)
+                        # write_file('data/test.json', script_text)
                         json_result = json.loads(script_text)
-                    
+
                         return json_result
         except ValueError as e:
             print(f'ошибка при парсинге html. {repr(e)}')
@@ -232,8 +237,8 @@ class Tutu(TicketProvider):
             for result in resultsList:
                 trains = result['trains']
                 for train in trains:
-                    
-                    run = train['params']['run']
+
+                    # run = train['params']['run']
                     trip = train['params']['trip']
                     seats = train['params']['withSeats']
                     for seat in seats['categories']:
@@ -249,16 +254,16 @@ class Tutu(TicketProvider):
                             ticket.top_seats_count = params['topSeatsCount']
                             ticket.bottom_seats_price = params['bottomSeatsPrice']
                             ticket.bottom_seats_count = params['bottomSeatsCount']
-                            
+
                             ticket.url = seats['buyAbsUrl']
 
                             ticket.number = trip['trainNumber']
                             ticket.origin_city = trip['departureStation']
                             ticket.destination_city = trip['arrivalStation']
                             depart_date_str = trip['departureDate'] + ' ' + trip['departureTime']
-                            ticket.depart_datetime = datetime.strptime( depart_date_str, '%Y-%m-%d %H:%M:%S' )
+                            ticket.depart_datetime = datetime.strptime(depart_date_str, '%Y-%m-%d %H:%M:%S')
                             arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
-                            ticket.arrival_datetime = datetime.strptime( arrival_date_str, '%Y-%m-%d %H:%M:%S' )
+                            ticket.arrival_datetime = datetime.strptime(arrival_date_str, '%Y-%m-%d %H:%M:%S')
                             ticket.travel_time = trip['travelTimeSeconds']
 
                             tickets.append(ticket)
@@ -280,10 +285,10 @@ class Tutu(TicketProvider):
         trains_url = 'https://suggest.travelpayouts.com/search'
 
         params = {
-            'service' : 'tutu_trains',
-            'term' : origin_city,
-            'term2' : destination_city,
-            'callback' : 'plazcard'
+            'service': 'tutu_trains',
+            'term': origin_city,
+            'term2': destination_city,
+            'callback': 'plazcard'
         }
 
         headers = {"Accept-Language": "en-US,en;q=0.5"}
@@ -312,20 +317,11 @@ class TutuInfo(RouteInfo):
 
 
 if __name__ == "__main__":
-    #city = input('Введите город: ')
+    # city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
     depart_date = datetime.strptime('10.04.2020', '%d.%m.%Y')
     tutu_parser = Tutu()
 
- #   print( depart_date >= (datetime.now() - timedelta(days=1)) )
-
- #   t = TutuInfo()
- #   print(t)
-
-    #print(get_cities_codes(origin_city, destination_city))
     print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
-    #print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
-   
-   # tutu_parser.read_csv_to_dict()
-   # tutu_parser.find_routes(origin_city, destination_city)
+    # print(tutu_parser.get_tickets(origin_city, destination_city, depart_date))
