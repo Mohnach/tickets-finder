@@ -1,6 +1,6 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, DECIMAL
-from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
+
 
 @as_declarative()
 class Base(object):
@@ -10,6 +10,7 @@ class Base(object):
         return cls.__name__.lower()
 
     id = Column(Integer, primary_key=True)
+
 
 class TutuCache(Base):
     # fields from RouteInfo
@@ -34,7 +35,8 @@ class TutuCache(Base):
     travel_time = Column(Integer)
 
     def __repr__(self):
-        return f'<{self.__class__}. id: {self.id}. Origin city: {self.origin_city}. Destination city: {self.destination_city}>'
+        return f"""<{self.__class__}. id: {self.id}. Origin city: {self.origin_city}.
+            Destination city: {self.destination_city}>"""
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from tutu import Tutu
 from aviasales import Aviasales
 from datetime import datetime
 
+
 def get_tickets(origin_city, destination_city, departure_date, return_date, sources):
     tickets = []
     if 'aviasales' in sources:
@@ -12,8 +13,9 @@ def get_tickets(origin_city, destination_city, departure_date, return_date, sour
         tickets += tutu_provider.get_tickets(origin_city, destination_city, departure_date)
     return tickets
 
+
 if __name__ == "__main__":
-    #city = input('Введите город: ')
+    # city = input('Введите город: ')
     origin_city = 'Москва'
     destination_city = 'Сочи'
     depart_date = datetime.strptime('2020-04-21', '%Y-%m-%d')

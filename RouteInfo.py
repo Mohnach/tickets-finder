@@ -3,6 +3,7 @@ from datetime import date, time, datetime
 from decimal import Decimal
 from typing import Optional
 
+
 @dataclass
 class RouteInfo:
     origin_city: str = ''
@@ -12,7 +13,7 @@ class RouteInfo:
     arrival_datetime: Optional[datetime] = None
     return_datetime: Optional[datetime] = None
     price: Decimal = Decimal('0')
-    obtained_datetime: datetime = field(default_factory = datetime.now)
+    obtained_datetime: datetime = field(default_factory=datetime.now)
 
     @property
     def depart_date(self) -> Optional[date]:
@@ -50,10 +51,11 @@ class RouteInfo:
             return self.return_datetime.time()
         return None
 
+
 if __name__ == "__main__":
-    test = RouteInfo('Moscow','London', 'peshkom')
+    test = RouteInfo('Moscow', 'London', 'peshkom')
     print(test)
     print(test.arrival_time)
     print(test.depart_date)
-    test2 = datetime(1970,4,11)
+    test2 = datetime(1970, 4, 11)
     print(test2)
