@@ -9,16 +9,26 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
 from model import TutuCache
-from sqlalchemy import create_engine, exc
-from sqlalchemy.orm import Session, mapper
-import os
+from sqlalchemy import exc
+from sqlalchemy.orm import mapper
 
 
 class Tutu(TicketProvider):
 
-    def __init__(self):
+    def __init__(self, db_session):
+        super(Tutu, self).__init__(db_session)
         self.read_csv_to_dict()
-        self.my_mapper = None
+        self.my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
+            'seat_type': TutuCache.__table__.c.seat_type,
+            'seats_count': TutuCache.__table__.c.seats_count,
+            'top_seats_price': TutuCache.__table__.c.top_seats_price,
+            'top_seats_count': TutuCache.__table__.c.top_seats_count,
+            'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
+            'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
+            'url': TutuCache.__table__.c.url,
+            'number': TutuCache.__table__.c.number,
+            'travel_time': TutuCache.__table__.c.travel_time
+        })
 
     def get_tickets(self, origin_city: str, destination_city: str, depart_date: datetime) -> List[RouteInfo]:
         routes = self.find_routes(origin_city, destination_city)
@@ -40,76 +50,58 @@ class Tutu(TicketProvider):
             if use_cache is False:
                 return func(self, route, depart_date)
             else:
-                # если есть база, то ищем билеты
+                # ищем билеты в базе
                 #  если нашли, возвращаем,
                 #  если не нашли - идем на сайт
-                origin_city_id = route['departure_station_id']
-                destination_city_id = route['arrival_station_id']
-
-                try:
-                    if not self.engine:
-                        print('База не инициализирована!')
-                        print('Создаем новую сессию...')
-                        basedir = os.path.abspath(os.path.dirname(__file__))
-                        base_file = os.path.join(basedir, 'data', 'test.db')
-                        base_uri = 'sqlite:///' + base_file
-
-                        self.engine = create_engine(base_uri)
-                        # Base.metadata.create_all(engine)
-                        if not os.path.exists(base_file):
-                            print('Создаем новую базу!')
-                            TutuCache.__table__.create(self.engine)
-
-                        self.session = Session(bind=self.engine)
-
-                    if not self.my_mapper:
-                        self.my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
-                            'seat_type': TutuCache.__table__.c.seat_type,
-                            'seats_count': TutuCache.__table__.c.seats_count,
-                            'top_seats_price': TutuCache.__table__.c.top_seats_price,
-                            'top_seats_count': TutuCache.__table__.c.top_seats_count,
-                            'bottom_seats_price': TutuCache.__table__.c.bottom_seats_price,
-                            'bottom_seats_count': TutuCache.__table__.c.bottom_seats_count,
-                            'url': TutuCache.__table__.c.url,
-                            'number': TutuCache.__table__.c.number,
-                            'travel_time': TutuCache.__table__.c.travel_time
-                        })
-
-                    next_day = depart_date + timedelta(days=1)
-
-                    tickets = self.session.query(self.my_mapper).filter(
-                            TutuCache.destination_city == destination_city_id,
-                            TutuCache.origin_city == origin_city_id,
-                            TutuCache.depart_datetime.between(depart_date, next_day)
-                        )
-
-                    tutu_info_list = list(tickets)
-                    for ticket in tutu_info_list:
-                        print('Роемся в выдаче из кэша')
-                        if (datetime.now() - ticket.obtained_datetime).days > 1:
-                            print('Удаляем старье')
-                            self.session.delete(ticket)
-                            self.session.commit()
-                            tutu_info_list.remove(ticket)
-
-                    if tutu_info_list:
-                        print('В кэше есть что-то актуальное! Берем')
-                        return tutu_info_list
-                except exc.SQLAlchemyError:
-                    print('ошибка при работе с кэшем')
+                tickets = self.get_from_cache(route, depart_date)
+                if tickets is not None:
+                    return tickets
 
                 print('В кэше ничего не нашлось. Погнали на сайт')
                 tickets = func(self, route, depart_date)
 
-                try:
-                    for ticket in tickets:
-                        self.session.add(ticket)
-                        self.session.commit()
-                except exc.SQLAlchemyError:
-                    print('ошибка записи в кэш')
+                if tickets:
+                    self.store_to_cache(tickets)
 
                 return tickets
         return wrapped
+
+    def get_from_cache(self, route, depart_date):
+        try:
+            origin_city_id = route['departure_station_id']
+            destination_city_id = route['arrival_station_id']
+
+            next_day = depart_date + timedelta(days=1)
+
+            tickets = self.session.query(self.my_mapper).filter(
+                    TutuCache.destination_city == destination_city_id,
+                    TutuCache.origin_city == origin_city_id,
+                    TutuCache.depart_datetime.between(depart_date, next_day)
+                )
+
+            tutu_info_list = list(tickets)
+            for ticket in tutu_info_list:
+                print('Роемся в выдаче из кэша')
+                if (datetime.now() - ticket.obtained_datetime).days > 1:
+                    print('Удаляем старье')
+                    self.session.delete(ticket)
+                    tutu_info_list.remove(ticket)
+            self.session.commit()
+
+            if tutu_info_list:
+                print('В кэше есть что-то актуальное! Берем')
+                return tutu_info_list
+        except exc.SQLAlchemyError:
+            print('ошибка при работе с кэшем')
+            return None
+
+    def store_to_cache(self, tickets):
+        try:
+            for ticket in tickets:
+                self.session.add(ticket)
+                self.session.commit()
+        except exc.SQLAlchemyError:
+            print('ошибка записи в кэш')
 
     # читаем csv в переменную routes_dict
     # ключ - id станции. value - лист со строками csv для этого города (в формате ordered dict)

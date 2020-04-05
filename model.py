@@ -39,6 +39,25 @@ class TutuCache(Base):
             Destination city: {self.destination_city}>"""
 
 
+class AviasalesCache(Base):
+    # fields from RouteInfo
+    route_type = Column(String)
+    origin_city = Column(String)
+    destination_city = Column(String)
+    depart_datetime = Column(DateTime)
+    arrival_datetime = Column(DateTime)
+    return_datetime = Column(DateTime)
+    price = Column(DECIMAL)
+    obtained_datetime = Column(DateTime)
+
+    # fields from AviasalesInfo
+    airline = Column(String)
+
+    def __repr__(self):
+        return f"""<{self.__class__}. id: {self.id}. Origin city: {self.origin_city}.
+            Destination city: {self.destination_city}>"""
+
+
 if __name__ == "__main__":
     test = TutuCache(origin_city="Default")
     print(test)

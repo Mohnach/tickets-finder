@@ -10,6 +10,9 @@ class TicketProvider:
     engine = None
     session = None
 
+    def __init__(self, db_session=None):
+        self.session = db_session
+
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
         pass
 
