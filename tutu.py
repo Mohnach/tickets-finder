@@ -99,7 +99,7 @@ class Tutu(TicketProvider):
         try:
             for ticket in tickets:
                 self.session.add(ticket)
-                self.session.commit()
+            self.session.commit()
         except exc.SQLAlchemyError:
             print('ошибка записи в кэш')
 
