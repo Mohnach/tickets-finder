@@ -11,7 +11,7 @@ from typing import List
 class Aviasales(TicketProvider):
 
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
-        pass
+        return []
 
     def get_iata_from_dict(self, iata_dict, target):
         if target in iata_dict:

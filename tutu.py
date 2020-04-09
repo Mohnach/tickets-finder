@@ -43,7 +43,7 @@ class Tutu(TicketProvider):
 
     def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
                            return_date: datetime) -> List[RouteInfo]:
-        pass
+        return []
 
     def use_cache(func):
         def wrapped(self, route, depart_date, use_cache=True):
