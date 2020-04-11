@@ -1,10 +1,10 @@
-from tutu import Tutu
-from aviasales import Aviasales
+from .tutu import Tutu
+from .aviasales import Aviasales
 from datetime import datetime
 from sqlalchemy import create_engine, exc
 from sqlalchemy.orm import Session
 import os
-import configs
+from . import configs
 
 
 def get_tickets(origin_city, destination_city, departure_date, providers_list):

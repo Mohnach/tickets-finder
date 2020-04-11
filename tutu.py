@@ -1,14 +1,16 @@
 import requests
 import csv
 import json
+import os
+from . import configs
 from decimal import Decimal
 from datetime import datetime, timedelta
-from TicketProvider import TicketProvider
-from RouteInfo import RouteInfo
+from .TicketProvider import TicketProvider
+from .RouteInfo import RouteInfo
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
-from model import TutuCache
+from .model import TutuCache
 from sqlalchemy import exc
 from sqlalchemy.orm import mapper
 
@@ -108,7 +110,9 @@ class Tutu(TicketProvider):
     def read_csv_to_dict(self):
         self.routes_dict = {}
         try:
-            with open('data/tutu_routes.csv', 'r', encoding='utf-8') as f:
+            basedir = os.path.abspath(os.path.dirname(__file__))
+            csv_file = os.path.join(basedir, configs.CSV_ROUTES_LOCATION)
+            with open(csv_file, 'r', encoding='utf-8') as f:
                 fields = ['departure_station_id',
                           'departure_station_name',
                           'arrival_station_id',
@@ -203,6 +207,7 @@ class Tutu(TicketProvider):
         try:
             if html:
                 soup = BeautifulSoup(html, 'html.parser')
+                # self.write_file('test.html', soup.prettify())
                 scripts_list = soup.findAll('script')
                 for script in scripts_list:
                     # print(script.text)

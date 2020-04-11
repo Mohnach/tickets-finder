@@ -1,5 +1,5 @@
 from datetime import datetime
-from RouteInfo import RouteInfo
+from .RouteInfo import RouteInfo
 from typing import List
 import random
 import requests

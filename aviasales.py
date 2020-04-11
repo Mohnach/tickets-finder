@@ -1,9 +1,9 @@
 import requests
-import secrets
+from . import secrets
 from decimal import Decimal
 from datetime import datetime
-from TicketProvider import TicketProvider
-from RouteInfo import RouteInfo
+from .TicketProvider import TicketProvider
+from .RouteInfo import RouteInfo
 from dataclasses import dataclass
 from typing import List
 
