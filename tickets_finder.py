@@ -43,7 +43,7 @@ def prepare_db_session():
 
 
 if __name__ == "__main__":
-    # city = input('Введите город: ')
+    # Debug
     origin_city = 'Москва'
     destination_city = 'Сочи'
     depart_date = datetime.strptime('2020-04-21', '%Y-%m-%d')
