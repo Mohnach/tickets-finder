@@ -6,6 +6,9 @@ from .TicketProvider import TicketProvider
 from .RouteInfo import RouteInfo
 from dataclasses import dataclass
 from typing import List
+import os
+from . import configs
+import csv
 
 
 class Aviasales(TicketProvider):
@@ -77,8 +80,13 @@ class Aviasales(TicketProvider):
         return None
 
     def get_return_tickets(self, origin_city: str, destination_city: str, depart_date: datetime,
-                           return_date: datetime) -> List[RouteInfo]:
-        iatas = self.convert_city_name_to_iata(origin_city, destination_city)
+                           return_date: datetime, convert_to_iata=True) -> List[RouteInfo]:
+        iatas = {}
+        if convert_to_iata is True:
+            iatas = self.convert_city_name_to_iata(origin_city, destination_city)
+        else:
+            iatas['destination'] = destination_city
+            iatas['origin'] = origin_city
 
         try:
             destination_iata = iatas.get('destination')
@@ -96,8 +104,11 @@ class Aviasales(TicketProvider):
             'return_date': return_date,
             'token': secrets.travelpayouts_token
         }
+        headers = {
+            'Accept-Encoding': 'gzip, deflate'
+        }
         try:
-            result = requests.get(tickets_url, params=params)
+            result = requests.get(tickets_url, params=params, headers=headers)
             result.raise_for_status()
             json_result = result.json()
 
@@ -135,6 +146,89 @@ class Aviasales(TicketProvider):
                 tickets.append(ticket)
 
         return tickets
+
+    def load_flights_routes(self):
+        self.routes_dict = {}
+        try:
+            basedir = os.path.abspath(os.path.dirname(__file__))
+            dat_file = os.path.join(basedir, configs.FLIGHTS_ROUTES_LOCATION)
+            with open(dat_file, 'r', encoding='utf-8') as f:
+                fields = ['Airline',
+                          'Airline ID',
+                          'Source airport',
+                          'Source airport ID',
+                          'Destination airport',
+                          'Destination airport ID',
+                          'Codeshare',
+                          'Stops',
+                          'Equipment']
+                reader = csv.DictReader(f, fields, delimiter=',')
+                for row in reader:
+                    if row['Source airport'] not in self.routes_dict:
+                        self.routes_dict[row['Source airport']] = []
+                    self.routes_dict[row['Source airport']].append(row)
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.routes_dict = {}
+        return self.routes_dict
+
+    def find_routes_for_airport(self, source_airport):
+        routes = []
+        if source_airport in self.routes_dict:
+            try:
+                for route_for_airport in self.routes_dict[source_airport]:
+                    # print(route_for_airport['Destination airport'])
+                    routes.append(route_for_airport)
+            except (ValueError, KeyError) as e:
+                print(f'error in routes_dict. {repr(e)}')
+        return routes
+
+    def load_airports_data(self):
+        self.airports_dict = {}
+        try:
+            basedir = os.path.abspath(os.path.dirname(__file__))
+            dat_file = os.path.join(basedir, configs.AIRPORTS_LOCATION)
+            with open(dat_file, 'r', encoding='utf-8') as f:
+                fields = ['Airport ID',
+                          'Name',
+                          'City',
+                          'Country',
+                          'IATA',
+                          'ICAO',
+                          'Latitude',
+                          'Longitude',
+                          'Altitude',
+                          'Timezone',
+                          'DST',
+                          'tz',
+                          'Type',
+                          'Source']
+                reader = csv.DictReader(f, fields, delimiter=',')
+                for row in reader:
+                    if row['IATA'] == '\\N':
+                        continue
+                    if row['City'] not in self.airports_dict:
+                        self.airports_dict[row['City']] = []
+                    self.airports_dict[row['City']].append(row)
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.airports_dict = {}
+        return self.airports_dict
+
+    def find_airports_for_city(self, city):
+        airports = []
+        if city in self.airports_dict:
+            try:
+                for airport_info in self.airports_dict[city]:
+                    # print(route_for_airport['Destination airport'])
+                    airports.append(airport_info['IATA'])
+            except (ValueError, KeyError) as e:
+                print(f'error in airports_dict. {repr(e)}')
+        return airports
 
 # информация о маршруте на самолете
 @dataclass
