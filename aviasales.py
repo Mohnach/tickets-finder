@@ -13,6 +13,10 @@ import csv
 
 class Aviasales(TicketProvider):
 
+    def __init__(self, db_session):
+        super(Aviasales, self).__init__(db_session)
+        self.load_flights_routes()
+
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
         return []
 
@@ -174,61 +178,6 @@ class Aviasales(TicketProvider):
             self.routes_dict = {}
         return self.routes_dict
 
-    def find_routes_for_airport(self, source_airport):
-        routes = []
-        if source_airport in self.routes_dict:
-            try:
-                for route_for_airport in self.routes_dict[source_airport]:
-                    # print(route_for_airport['Destination airport'])
-                    routes.append(route_for_airport)
-            except (ValueError, KeyError) as e:
-                print(f'error in routes_dict. {repr(e)}')
-        return routes
-
-    def load_airports_data(self):
-        self.airports_dict = {}
-        try:
-            basedir = os.path.abspath(os.path.dirname(__file__))
-            dat_file = os.path.join(basedir, configs.AIRPORTS_LOCATION)
-            with open(dat_file, 'r', encoding='utf-8') as f:
-                fields = ['Airport ID',
-                          'Name',
-                          'City',
-                          'Country',
-                          'IATA',
-                          'ICAO',
-                          'Latitude',
-                          'Longitude',
-                          'Altitude',
-                          'Timezone',
-                          'DST',
-                          'tz',
-                          'Type',
-                          'Source']
-                reader = csv.DictReader(f, fields, delimiter=',')
-                for row in reader:
-                    if row['IATA'] == '\\N':
-                        continue
-                    if row['City'] not in self.airports_dict:
-                        self.airports_dict[row['City']] = []
-                    self.airports_dict[row['City']].append(row)
-        except OSError as e:
-            print(f'не удалось открыть csv файл. {repr(e)}')
-        except (ValueError, KeyError) as e:
-            print(e.text)
-            self.airports_dict = {}
-        return self.airports_dict
-
-    def find_airports_for_city(self, city):
-        airports = []
-        if city in self.airports_dict:
-            try:
-                for airport_info in self.airports_dict[city]:
-                    # print(route_for_airport['Destination airport'])
-                    airports.append(airport_info['IATA'])
-            except (ValueError, KeyError) as e:
-                print(f'error in airports_dict. {repr(e)}')
-        return airports
 
 # информация о маршруте на самолете
 @dataclass

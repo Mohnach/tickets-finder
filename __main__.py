@@ -1,7 +1,7 @@
 from datetime import datetime
 from .tutu import Tutu
 from .aviasales import Aviasales
-from .CitiesInfo import CitiesInfo
+from .cities import Cities
 from .tickets_finder import prepare_db_session, get_return_tickets, get_tickets
 
 
@@ -18,39 +18,59 @@ aviasales_provider = Aviasales(db_session=session)
 providers_list.append(aviasales_provider)
 
 # содержит инфу о городах: переводы на разные языки, iata code, координаты
-cities_info = CitiesInfo()
+cities_info = Cities()
 eng_name = cities_info.translate_from_russian_to_english(origin_city)
 
-# поиск аэропортов для заданного города (возможно, лучше унести в CitiesInfo)
-aviasales_provider.load_airports_data()
-airports = aviasales_provider.find_airports_for_city(eng_name)
+# поиск аэропортов для заданного города
+airports = cities_info.find_airports_for_city(eng_name)
 print(airports)
-
-aviasales_provider.load_flights_routes()
 
 tickets = []
 for airport in airports:
     # поиск всех возможных направлений для заданного аэропорта
-    routes_list = aviasales_provider.find_routes_for_airport(airport)
+    routes_list = aviasales_provider.find_routes_for_depart_point(airport)
     print('Число маршрутов из аэропорта {}: {}'.format(airport, len(routes_list)))
 
-    for route in routes_list:
-        # print('from {} to {}'.format(airport, route['Destination airport']))
-        
-        # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
-        distance = cities_info.calculate_distance(airport, route['Destination airport'])
-        if distance > 5000:
-            continue
+#     for route in routes_list:
+#         # print('from {} to {}'.format(airport, route['Destination airport']))
 
-        tickets += aviasales_provider.get_return_tickets(airport,
-                                                         route['Destination airport'],
-                                                         depart_date,
-                                                         return_date,
-                                                         convert_to_iata=False)
+#         # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
+#         distance = cities_info.calculate_distance(airport, route['Destination airport'])
+#         if distance > 5000:
+#             continue
+
+#         tickets += aviasales_provider.get_return_tickets(airport,
+#                                                          route['Destination airport'],
+#                                                          depart_date,
+#                                                          return_date,
+#                                                          convert_to_iata=False)
+# print(tickets)
+
+tutu_provider = Tutu(db_session=session)
+providers_list.append(tutu_provider)
+
+# поиск аэропортов для заданного города
+stations = tutu_provider.find_stations(origin_city)
+print(stations)
+
+tickets = []
+for station in stations:
+    # поиск всех возможных направлений для заданного аэропорта
+    routes_list = tutu_provider.find_routes_for_depart_point(station)
+    print('Число маршрутов со станции {}: {}'.format(station, len(routes_list)))
+
+    # for route in routes_list:
+    #     # print('from {} to {}'.format(airport, route['Destination airport']))
+
+    #     # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
+    #     # distance = cities_info.calculate_distance(airport, route['Destination airport'])
+    #     # if distance > 5000:
+    #     #     continue
+
+    #     tickets += tutu_provider.get_tickets(route['departure_station_name'],
+    #                                          route['arrival_station_name'],
+    #                                          depart_date)
 print(tickets)
-
-#tutu_provider = Tutu(db_session=session)
-#providers_list.append(tutu_provider)
 
 #print('One way tickets')
 #print(get_tickets(origin_city, destination_city, depart_date, providers_list))

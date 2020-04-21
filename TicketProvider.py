@@ -19,6 +19,16 @@ class TicketProvider:
     def get_return_tickets(self, origin: str, destination: str, depart_date: datetime, return_date: datetime) -> List[RouteInfo]:
         pass
 
+    def find_routes_for_depart_point(self, depart_point):
+        routes = []
+        if depart_point in self.routes_dict:
+            try:
+                for route_for_place in self.routes_dict[depart_point]:
+                    routes.append(route_for_place)
+            except (ValueError, KeyError) as e:
+                print(f'error in routes_dict. {repr(e)}')
+        return routes
+
     def get_random_user_agent(self):
         user_agent_list = [
             # Chrome

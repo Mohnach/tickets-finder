@@ -1,4 +1,3 @@
-import requests
 import json
 import csv
 import os
@@ -6,9 +5,10 @@ import geopy.distance
 from . import configs
 
 
-class CitiesInfo:
+class Cities:
     cities = None
     airports = None
+    airports_dict = None
 
     def __init__(self):
         self.load_cities_info()
@@ -67,6 +67,7 @@ class CitiesInfo:
 
     def load_airports_data(self):
         self.airports = []
+        self.airports_dict = {}
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
             dat_file = os.path.join(basedir, configs.AIRPORTS_LOCATION)
@@ -88,6 +89,11 @@ class CitiesInfo:
                 reader = csv.DictReader(f, fields, delimiter=',')
                 for row in reader:
                     self.airports.append(row)
+                    if row['IATA'] == '\\N':
+                        continue
+                    if row['City'] not in self.airports_dict:
+                        self.airports_dict[row['City']] = []
+                    self.airports_dict[row['City']].append(row)
         except OSError as e:
             print(f'не удалось открыть csv файл. {repr(e)}')
         except (ValueError, KeyError) as e:
@@ -95,9 +101,19 @@ class CitiesInfo:
             self.airports = []
         return self.airports
 
+    def find_airports_for_city(self, city):
+        airports = []
+        if city in self.airports_dict:
+            try:
+                for airport_info in self.airports_dict[city]:
+                    airports.append(airport_info['IATA'])
+            except (ValueError, KeyError) as e:
+                print(f'error in airports_dict. {repr(e)}')
+        return airports
+
 
 if __name__ == "__main__":
-    test = CitiesInfo()
+    test = Cities()
     rus_name = 'Тверь'
     name = test.translate_from_russian_to_english(rus_name)
     print(test.get_iata(rus_name=rus_name))

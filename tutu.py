@@ -137,12 +137,18 @@ class Tutu(TicketProvider):
                     for route_for_city in self.routes_dict[key]:
                         # print(route_for_city['arrival_station_name'])
                         if route_for_city['arrival_station_name'] == destination_city:
-                            # route = {}
-                            # route['departure_station_name'] = route_for_city['departure_station_name']
-                            # route['departure_station_id'] = route_for_city['departure_station_id']
-                            # route['arrival_station_name'] = route_for_city['arrival_station_name']
-                            # route['arrival_station_id'] = route_for_city['arrival_station_id']
                             routes.append(route_for_city)
+        except (ValueError, KeyError) as e:
+            print(f'error in routes_dict. {repr(e)}')
+        return routes
+
+    def find_stations(self, origin_city):
+        routes = []
+        # if origin_city in self.routes_dict:
+        try:
+            for key in self.routes_dict:
+                if origin_city in key:
+                    routes.append(key)
         except (ValueError, KeyError) as e:
             print(f'error in routes_dict. {repr(e)}')
         return routes
