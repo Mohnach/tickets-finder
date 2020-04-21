@@ -1,6 +1,5 @@
 import json
 import csv
-import os
 import geopy.distance
 from . import configs
 
@@ -9,14 +8,15 @@ class Cities:
     cities = None
     airports = None
     airports_dict = None
+    stations = None
 
     def __init__(self):
         self.load_cities_info()
         self.load_airports_data()
+        self.load_esr_data()
 
     def load_cities_info(self):
-        basedir = os.path.abspath(os.path.dirname(__file__))
-        cities_file = os.path.join(basedir, configs.CITIES_LOCATION)
+        cities_file = configs.CITIES_LOCATION
         with open(cities_file, "r") as read_file:
             data = json.load(read_file)
         self.cities = data
@@ -50,14 +50,22 @@ class Cities:
                 coords['lon'] = float(row['Longitude'])
                 return coords
 
-    def calculate_distance(self, origin_iata, destination_iata):
-        origin_coords = self.get_coordinates_from_airports_base(origin_iata)
-        if origin_coords is None:
-            origin_coords = self.get_coordinates_from_cities_base(origin_iata)
+    def get_coordinates_from_stations_base(self, name=''):
+        for row in self.stations:
+            if row['name'] == name or row['alt_name'] == name or row['old_name'] == name or row['official_name'] == name:
+                coords = {}
+                coords['lat'] = float(row['lat'])
+                coords['lon'] = float(row['lon'])
+                return coords
 
-        destination_coords = self.get_coordinates_from_airports_base(destination_iata)
-        if destination_coords is None:
-            destination_coords = self.get_coordinates_from_cities_base(destination_iata)
+    def get_airport_coordinates(self, iata):
+        coords = self.get_coordinates_from_airports_base(iata)
+        if coords is None:
+            coords = self.get_coordinates_from_cities_base(iata)
+
+    def calculate_distance(self, origin_coords, destination_coords):
+        if not origin_coords or not destination_coords:
+            return 9999999
 
         coords_1 = (origin_coords['lat'], origin_coords['lon'])
         coords_2 = (destination_coords['lat'], destination_coords['lon'])
@@ -69,8 +77,7 @@ class Cities:
         self.airports = []
         self.airports_dict = {}
         try:
-            basedir = os.path.abspath(os.path.dirname(__file__))
-            dat_file = os.path.join(basedir, configs.AIRPORTS_LOCATION)
+            dat_file = configs.AIRPORTS_LOCATION
             with open(dat_file, 'r', encoding='utf-8') as f:
                 fields = ['Airport ID',
                           'Name',
@@ -110,6 +117,41 @@ class Cities:
             except (ValueError, KeyError) as e:
                 print(f'error in airports_dict. {repr(e)}')
         return airports
+
+    def load_esr_data(self):
+        self.stations = []
+        rows_with_names = ["name", "alt_name", "old_name", "official_name"]
+        try:
+            csv_file = configs.STATIONS_LOCATION
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f, delimiter=';')
+                for row in reader:
+                    if row['railway'] != 'station':
+                        continue
+                    for name in rows_with_names:
+                        if '-Пассажирская-' in row[name]:
+                            row[name] = row[name].replace('-Пассажирская-', ' ')
+                        if '-' in row[name]:
+                            row[name] = row[name].replace('-', ' ')
+                        if '-Пассажирская' in row[name]:
+                            row[name] = row[name].replace('-Пассажирская', '')
+                        if '-Пассажирский' in row[name]:
+                            row[name] = row[name].replace('-Пассажирский', '')
+                        if 'I' in row[name]:
+                            row[name] = row[name].replace('I', '1')
+                        if 'II' in row[name]:
+                            row[name] = row[name].replace('II', '2')
+                        if 'III' in row[name]:
+                            row[name] = row[name].replace('III', '3')
+                        row[name] = row[name].strip()
+
+                    self.stations.append(row)
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.stations = []
+        return self.stations
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ from .TicketProvider import TicketProvider
 from .RouteInfo import RouteInfo
 from dataclasses import dataclass
 from typing import List
-import os
 from . import configs
 import csv
 
@@ -154,8 +153,7 @@ class Aviasales(TicketProvider):
     def load_flights_routes(self):
         self.routes_dict = {}
         try:
-            basedir = os.path.abspath(os.path.dirname(__file__))
-            dat_file = os.path.join(basedir, configs.FLIGHTS_ROUTES_LOCATION)
+            dat_file = configs.FLIGHTS_ROUTES_LOCATION
             with open(dat_file, 'r', encoding='utf-8') as f:
                 fields = ['Airline',
                           'Airline ID',

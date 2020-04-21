@@ -29,8 +29,7 @@ def prepare_db_session():
     session = None
     try:
         print('Создаем новую сессию...')
-        basedir = os.path.abspath(os.path.dirname(__file__))
-        base_file = os.path.join(basedir, configs.DB_LOCATION)
+        base_file = configs.DB_LOCATION
         base_uri = 'sqlite:///' + base_file
 
         engine = create_engine(base_uri)

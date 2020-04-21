@@ -57,19 +57,24 @@ tickets = []
 for station in stations:
     # поиск всех возможных направлений для заданного аэропорта
     routes_list = tutu_provider.find_routes_for_depart_point(station)
+#    routes_list = routes_list[1:5]
     print('Число маршрутов со станции {}: {}'.format(station, len(routes_list)))
 
-    # for route in routes_list:
-    #     # print('from {} to {}'.format(airport, route['Destination airport']))
+    for route in routes_list:
+       # print('from {} to {}'.format(station, route['arrival_station_name']))
+       # print(cities_info.get_coordinates_from_stations_base(route['departure_station_name']))
 
-    #     # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
-    #     # distance = cities_info.calculate_distance(airport, route['Destination airport'])
-    #     # if distance > 5000:
-    #     #     continue
+        # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
+        distance = cities_info.calculate_distance(
+            cities_info.get_coordinates_from_stations_base(route['departure_station_name']),
+            cities_info.get_coordinates_from_stations_base(route['arrival_station_name']))
+        if distance > 1000:
+           # print('Не поедем - Далеко: {}km'.format(distance))
+            continue
 
-    #     tickets += tutu_provider.get_tickets(route['departure_station_name'],
-    #                                          route['arrival_station_name'],
-    #                                          depart_date)
+        tickets += tutu_provider.get_tickets(route['departure_station_name'],
+                                             route['arrival_station_name'],
+                                             depart_date)
 print(tickets)
 
 #print('One way tickets')

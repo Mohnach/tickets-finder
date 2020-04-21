@@ -113,19 +113,24 @@ class Tutu(TicketProvider):
             basedir = os.path.abspath(os.path.dirname(__file__))
             csv_file = os.path.join(basedir, configs.CSV_ROUTES_LOCATION)
             with open(csv_file, 'r', encoding='utf-8') as f:
-                fields = ['departure_station_id',
-                          'departure_station_name',
-                          'arrival_station_id',
-                          'arrival_station_name']
-                reader = csv.DictReader(f, fields, delimiter=';')
+                reader = csv.DictReader(f, delimiter=';')
                 for row in reader:
+                    for name in ['departure_station_name', 'arrival_station_name']:
+                        if '-' in row[name]:
+                            row[name] = row[name].replace('-', ' ')
+                        if '.' in row[name]:
+                            row[name] = row[name].replace('.', ' ')
+                        if 'Пасс' in row[name]:
+                            row[name] = row[name].replace('Пасс', '')
+                        row[name] = row[name].strip()
                     if row['departure_station_name'] not in self.routes_dict:
                         self.routes_dict[row['departure_station_name']] = []
+
                     self.routes_dict[row['departure_station_name']].append(row)
         except OSError as e:
             print(f'не удалось открыть csv файл. {repr(e)}')
         except (ValueError, KeyError) as e:
-            print(e.text)
+            print(repr(e))
             self.routes_dict = {}
 
     def find_routes(self, origin_city, destination_city):
