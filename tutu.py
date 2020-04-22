@@ -16,12 +16,23 @@ from sqlalchemy import exc
 from sqlalchemy.orm import mapper
 
 
+# информация о маршруте на поезде
+@dataclass
+class TutuInfo(RouteInfo):
+    seat_type: str = ''
+    seats_count: int = 0
+    top_seats_price: Decimal = Decimal(0)
+    top_seats_count: int = 0
+    bottom_seats_price: Decimal = Decimal(0)
+    bottom_seats_count: int = 0
+    url: str = ''
+    number: str = ''
+    travel_time: int = 0
+
+
 class Tutu(TicketProvider):
 
-    def __init__(self, db_session):
-        super(Tutu, self).__init__(db_session)
-        self.read_csv_to_dict()
-        self.my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
+    my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
             'seat_type': TutuCache.__table__.c.seat_type,
             'seats_count': TutuCache.__table__.c.seats_count,
             'top_seats_price': TutuCache.__table__.c.top_seats_price,
@@ -32,6 +43,10 @@ class Tutu(TicketProvider):
             'number': TutuCache.__table__.c.number,
             'travel_time': TutuCache.__table__.c.travel_time
         })
+
+    def __init__(self, db_session):
+        super(Tutu, self).__init__(db_session)
+        self.read_csv_to_dict()
 
     def get_tickets(self, origin_city: str, destination_city: str, depart_date: datetime) -> List[RouteInfo]:
         routes = self.find_routes(origin_city, destination_city)
@@ -351,20 +366,6 @@ class Tutu(TicketProvider):
         except (requests.RequestException, ValueError):
             print('exception')
         return None
-
-
-# информация о маршруте на поезде
-@dataclass
-class TutuInfo(RouteInfo):
-    seat_type: str = ''
-    seats_count: int = 0
-    top_seats_price: Decimal = Decimal(0)
-    top_seats_count: int = 0
-    bottom_seats_price: Decimal = Decimal(0)
-    bottom_seats_count: int = 0
-    url: str = ''
-    number: str = ''
-    travel_time: int = 0
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import requests
 from . import secrets
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from .TicketProvider import TicketProvider
 from .RouteInfo import RouteInfo
 from dataclasses import dataclass
@@ -9,15 +9,94 @@ from typing import List
 from . import configs
 from .cities import Cities
 import csv
+from .model import AviasalesCache
+from sqlalchemy import exc
+from sqlalchemy.orm import mapper
+
+
+# информация о маршруте на самолете
+@dataclass
+class AviasalesInfo(RouteInfo):
+    airline: str = ''
 
 
 class Aviasales(TicketProvider):
+
+    my_mapper = mapper(AviasalesInfo, AviasalesCache.__table__, properties={
+            'airline': AviasalesCache.__table__.c.airline
+        })
 
     def __init__(self, db_session):
         super(Aviasales, self).__init__(db_session)
         self.load_flights_routes()
 
+    def use_cache(func):
+        def wrapped(self, origin_city, destination_city, departure_date, return_date, convert_to_iata, use_cache=True):
+            if use_cache is False:
+                return func(self, origin_city, destination_city, departure_date, return_date, convert_to_iata)
+            else:
+                # ищем билеты в базе
+                #  если нашли, возвращаем,
+                #  если не нашли - идем на сайт
+                tickets = self.get_from_cache(origin_city, destination_city, departure_date, return_date)
+                if tickets is not None:
+                    return tickets
+
+                print('В кэше ничего не нашлось. Погнали на сайт')
+                tickets = func(self, origin_city, destination_city, departure_date, return_date, convert_to_iata)
+
+                if tickets:
+                    self.store_to_cache(tickets)
+
+                return tickets
+        return wrapped
+
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
+        return []
+
+    @use_cache
+    def get_return_tickets(self, origin_city: str, destination_city: str, depart_date: datetime,
+                           return_date: datetime, convert_to_iata=True) -> List[RouteInfo]:
+        iatas = {}
+        if convert_to_iata is True:
+            iatas = self.convert_city_name_to_iata(origin_city, destination_city)
+        else:
+            iatas['destination'] = destination_city
+            iatas['origin'] = origin_city
+
+        try:
+            destination_iata = iatas.get('destination')
+            origin_iata = iatas.get('origin')
+        except ValueError:
+            print('Invalid city name')
+            return []
+
+        tickets_url = 'http://api.travelpayouts.com/v1/prices/cheap'
+        params = {
+            'currency': 'rub',
+            'origin': origin_iata,
+            'destination': destination_iata,
+            'depart_date': depart_date,
+            'return_date': return_date,
+            'token': secrets.travelpayouts_token
+        }
+        headers = {
+            'Accept-Encoding': 'gzip, deflate'
+        }
+        try:
+            result = requests.get(tickets_url, params=params, headers=headers)
+            result.raise_for_status()
+            json_result = result.json()
+
+            if 'success' in json_result:
+                if json_result['success'] is True:
+                    return self.extract_tickets_from_json(
+                        json_result.get('data'),
+                        destination_iata,
+                        origin_city,
+                        destination_city)
+        except (requests.RequestException, ValueError):
+            pass
         return []
 
     def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
@@ -56,6 +135,42 @@ class Aviasales(TicketProvider):
                                                        return_date,
                                                        convert_to_iata=False)
         return tickets
+
+    def get_from_cache(self, origin_city, destination_city, depart_date, return_date):
+        try:
+            next_day_after_departure = depart_date + timedelta(days=1)
+            next_day_after_return = return_date + timedelta(days=1)
+
+            tickets = self.session.query(self.my_mapper).filter(
+                    AviasalesCache.destination_city == destination_city,
+                    AviasalesCache.origin_city == origin_city,
+                    AviasalesCache.depart_datetime.between(depart_date, next_day_after_departure),
+                    AviasalesCache.return_datetime.between(return_date, next_day_after_return)
+                )
+
+            cached_tickets = list(tickets)
+            for ticket in cached_tickets:
+                print('Роемся в выдаче из кэша')
+                if (datetime.now() - ticket.obtained_datetime).days > 1:
+                    print('Удаляем старье')
+                    self.session.delete(ticket)
+                    cached_tickets.remove(ticket)
+            self.session.commit()
+
+            if cached_tickets:
+                print('В кэше есть что-то актуальное! Берем')
+                return cached_tickets
+        except exc.SQLAlchemyError:
+            print('ошибка при работе с кэшем')
+            return None
+
+    def store_to_cache(self, tickets):
+        try:
+            for ticket in tickets:
+                self.session.add(ticket)
+            self.session.commit()
+        except exc.SQLAlchemyError:
+            print('ошибка записи в кэш')
 
     def get_iata_from_dict(self, iata_dict, target):
         if target in iata_dict:
@@ -120,50 +235,6 @@ class Aviasales(TicketProvider):
             print('')
         return None
 
-    def get_return_tickets(self, origin_city: str, destination_city: str, depart_date: datetime,
-                           return_date: datetime, convert_to_iata=True) -> List[RouteInfo]:
-        iatas = {}
-        if convert_to_iata is True:
-            iatas = self.convert_city_name_to_iata(origin_city, destination_city)
-        else:
-            iatas['destination'] = destination_city
-            iatas['origin'] = origin_city
-
-        try:
-            destination_iata = iatas.get('destination')
-            origin_iata = iatas.get('origin')
-        except ValueError:
-            print('Invalid city name')
-            return []
-
-        tickets_url = 'http://api.travelpayouts.com/v1/prices/cheap'
-        params = {
-            'currency': 'rub',
-            'origin': origin_iata,
-            'destination': destination_iata,
-            'depart_date': depart_date,
-            'return_date': return_date,
-            'token': secrets.travelpayouts_token
-        }
-        headers = {
-            'Accept-Encoding': 'gzip, deflate'
-        }
-        try:
-            result = requests.get(tickets_url, params=params, headers=headers)
-            result.raise_for_status()
-            json_result = result.json()
-
-            if 'success' in json_result:
-                if json_result['success'] is True:
-                    return self.extract_tickets_from_json(
-                        json_result.get('data'),
-                        destination_iata,
-                        origin_city,
-                        destination_city)
-        except (requests.RequestException, ValueError):
-            pass
-        return []
-
     def extract_tickets_from_json(self, data, destination_iata, origin_city, destination_city):
         tickets = []
         tickets_list = data.get(destination_iata)
@@ -213,12 +284,6 @@ class Aviasales(TicketProvider):
             print(e.text)
             self.routes_dict = {}
         return self.routes_dict
-
-
-# информация о маршруте на самолете
-@dataclass
-class AviasalesInfo(RouteInfo):
-    airline: str = ''
 
 
 if __name__ == "__main__":
