@@ -11,16 +11,28 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
 from .model import TutuCache
+from .cities import Cities
 from sqlalchemy import exc
 from sqlalchemy.orm import mapper
 
 
+# информация о маршруте на поезде
+@dataclass
+class TutuInfo(RouteInfo):
+    seat_type: str = ''
+    seats_count: int = 0
+    top_seats_price: Decimal = Decimal(0)
+    top_seats_count: int = 0
+    bottom_seats_price: Decimal = Decimal(0)
+    bottom_seats_count: int = 0
+    url: str = ''
+    number: str = ''
+    travel_time: int = 0
+
+
 class Tutu(TicketProvider):
 
-    def __init__(self, db_session):
-        super(Tutu, self).__init__(db_session)
-        self.read_csv_to_dict()
-        self.my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
+    my_mapper = mapper(TutuInfo, TutuCache.__table__, properties={
             'seat_type': TutuCache.__table__.c.seat_type,
             'seats_count': TutuCache.__table__.c.seats_count,
             'top_seats_price': TutuCache.__table__.c.top_seats_price,
@@ -31,6 +43,10 @@ class Tutu(TicketProvider):
             'number': TutuCache.__table__.c.number,
             'travel_time': TutuCache.__table__.c.travel_time
         })
+
+    def __init__(self, db_session):
+        super(Tutu, self).__init__(db_session)
+        self.read_csv_to_dict()
 
     def get_tickets(self, origin_city: str, destination_city: str, depart_date: datetime) -> List[RouteInfo]:
         routes = self.find_routes(origin_city, destination_city)
@@ -45,6 +61,39 @@ class Tutu(TicketProvider):
 
     def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
                            return_date: datetime) -> List[RouteInfo]:
+        return []
+
+    def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                       cities_info: Cities) -> List[RouteInfo]:
+        # поиск станций для заданного города
+        stations = self.find_stations(origin_city)
+        print(stations)
+
+        tickets = []
+        for station in stations:
+            # поиск всех возможных направлений для заданной станции
+            routes_list = self.find_routes_for_depart_point(station)
+            print('Число маршрутов со станции {}: {}'.format(station, len(routes_list)))
+            for route in routes_list:
+                if route['arrival_station_name'] in cities_info.russian_popular_cities:
+                    print('from {} to {}'.format(station, route['arrival_station_name']))
+
+                    # Если дистанция между станциями больше 1000км, то пропускаем это направление
+                    distance = cities_info.calculate_distance(
+                        cities_info.get_coordinates_from_stations_base(route['departure_station_name']),
+                        cities_info.get_coordinates_from_stations_base(route['arrival_station_name']))
+                    if distance > 1000:
+                        # print('Не поедем - Далеко: {}km'.format(distance))
+                        continue
+
+                    tickets += self.get_tickets(route['departure_station_name'],
+                                                route['arrival_station_name'],
+                                                depart_date)
+
+        return tickets
+
+    def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime, return_date: datetime,
+                                              cities_info: Cities) -> List[RouteInfo]:
         return []
 
     def use_cache(func):
@@ -113,19 +162,24 @@ class Tutu(TicketProvider):
             basedir = os.path.abspath(os.path.dirname(__file__))
             csv_file = os.path.join(basedir, configs.CSV_ROUTES_LOCATION)
             with open(csv_file, 'r', encoding='utf-8') as f:
-                fields = ['departure_station_id',
-                          'departure_station_name',
-                          'arrival_station_id',
-                          'arrival_station_name']
-                reader = csv.DictReader(f, fields, delimiter=';')
+                reader = csv.DictReader(f, delimiter=';')
                 for row in reader:
+                    for name in ['departure_station_name', 'arrival_station_name']:
+                        if '-' in row[name]:
+                            row[name] = row[name].replace('-', ' ')
+                        if '.' in row[name]:
+                            row[name] = row[name].replace('.', ' ')
+                        if 'Пасс' in row[name]:
+                            row[name] = row[name].replace('Пасс', '')
+                        row[name] = row[name].strip()
                     if row['departure_station_name'] not in self.routes_dict:
                         self.routes_dict[row['departure_station_name']] = []
+
                     self.routes_dict[row['departure_station_name']].append(row)
         except OSError as e:
             print(f'не удалось открыть csv файл. {repr(e)}')
         except (ValueError, KeyError) as e:
-            print(e.text)
+            print(repr(e))
             self.routes_dict = {}
 
     def find_routes(self, origin_city, destination_city):
@@ -137,12 +191,18 @@ class Tutu(TicketProvider):
                     for route_for_city in self.routes_dict[key]:
                         # print(route_for_city['arrival_station_name'])
                         if route_for_city['arrival_station_name'] == destination_city:
-                            # route = {}
-                            # route['departure_station_name'] = route_for_city['departure_station_name']
-                            # route['departure_station_id'] = route_for_city['departure_station_id']
-                            # route['arrival_station_name'] = route_for_city['arrival_station_name']
-                            # route['arrival_station_id'] = route_for_city['arrival_station_id']
                             routes.append(route_for_city)
+        except (ValueError, KeyError) as e:
+            print(f'error in routes_dict. {repr(e)}')
+        return routes
+
+    def find_stations(self, origin_city):
+        routes = []
+        # if origin_city in self.routes_dict:
+        try:
+            for key in self.routes_dict:
+                if origin_city in key:
+                    routes.append(key)
         except (ValueError, KeyError) as e:
             print(f'error in routes_dict. {repr(e)}')
         return routes
@@ -306,20 +366,6 @@ class Tutu(TicketProvider):
         except (requests.RequestException, ValueError):
             print('exception')
         return None
-
-
-# информация о маршруте на поезде
-@dataclass
-class TutuInfo(RouteInfo):
-    seat_type: str = ''
-    seats_count: int = 0
-    top_seats_price: Decimal = Decimal(0)
-    top_seats_count: int = 0
-    bottom_seats_price: Decimal = Decimal(0)
-    bottom_seats_count: int = 0
-    url: str = ''
-    number: str = ''
-    travel_time: int = 0
 
 
 if __name__ == "__main__":
