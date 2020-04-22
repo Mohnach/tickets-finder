@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from typing import List
 from .model import TutuCache
+from .cities import Cities
 from sqlalchemy import exc
 from sqlalchemy.orm import mapper
 
@@ -45,6 +46,39 @@ class Tutu(TicketProvider):
 
     def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
                            return_date: datetime) -> List[RouteInfo]:
+        return []
+
+    def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                       cities_info: Cities) -> List[RouteInfo]:
+        # поиск станций для заданного города
+        stations = self.find_stations(origin_city)
+        print(stations)
+
+        tickets = []
+        for station in stations:
+            # поиск всех возможных направлений для заданной станции
+            routes_list = self.find_routes_for_depart_point(station)
+            print('Число маршрутов со станции {}: {}'.format(station, len(routes_list)))
+            for route in routes_list:
+                if route['arrival_station_name'] in cities_info.russian_popular_cities:
+                    print('from {} to {}'.format(station, route['arrival_station_name']))
+
+                    # Если дистанция между станциями больше 1000км, то пропускаем это направление
+                    distance = cities_info.calculate_distance(
+                        cities_info.get_coordinates_from_stations_base(route['departure_station_name']),
+                        cities_info.get_coordinates_from_stations_base(route['arrival_station_name']))
+                    if distance > 1000:
+                        # print('Не поедем - Далеко: {}km'.format(distance))
+                        continue
+
+                    tickets += self.get_tickets(route['departure_station_name'],
+                                                route['arrival_station_name'],
+                                                depart_date)
+
+        return tickets
+
+    def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime, return_date: datetime,
+                                              cities_info: Cities) -> List[RouteInfo]:
         return []
 
     def use_cache(func):

@@ -7,6 +7,7 @@ from .RouteInfo import RouteInfo
 from dataclasses import dataclass
 from typing import List
 from . import configs
+from .cities import Cities
 import csv
 
 
@@ -18,6 +19,43 @@ class Aviasales(TicketProvider):
 
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
         return []
+
+    def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                       cities_info: Cities) -> List[RouteInfo]:
+        return []
+
+    def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                              return_date: datetime, cities_info: Cities) -> List[RouteInfo]:
+        eng_name = cities_info.translate_from_russian_to_english(origin_city)
+
+        # поиск аэропортов для заданного города
+        airports = cities_info.find_airports_for_city(eng_name)
+        print(airports)
+
+        tickets = []
+        for airport in airports:
+            # поиск всех возможных направлений для заданного аэропорта
+            routes_list = self.find_routes_for_depart_point(airport)
+            print('Число маршрутов из аэропорта {}: {}'.format(airport, len(routes_list)))
+
+            for route in routes_list:
+                if cities_info.translate_from_iata_to_english(route['Destination airport']) \
+                        in cities_info.international_popular_cities:
+                    print('from {} to {}'.format(airport, route['Destination airport']))
+                    # Если дистанция между аэропортами больше 5000км, то пропускаем это направление
+                    distance = cities_info.calculate_distance(
+                        cities_info.get_airport_coordinates(route['Source airport']),
+                        cities_info.get_airport_coordinates(route['Destination airport']))
+                    if distance > 5000:
+                        print(f'Далеко: {distance}km')
+                        continue
+
+                    tickets += self.get_return_tickets(airport,
+                                                       route['Destination airport'],
+                                                       depart_date,
+                                                       return_date,
+                                                       convert_to_iata=False)
+        return tickets
 
     def get_iata_from_dict(self, iata_dict, target):
         if target in iata_dict:

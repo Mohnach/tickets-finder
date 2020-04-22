@@ -1,5 +1,6 @@
 from datetime import datetime
 from .RouteInfo import RouteInfo
+from .cities import Cities
 from typing import List
 import random
 import requests
@@ -16,7 +17,16 @@ class TicketProvider:
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
         pass
 
-    def get_return_tickets(self, origin: str, destination: str, depart_date: datetime, return_date: datetime) -> List[RouteInfo]:
+    def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
+                           return_date: datetime) -> List[RouteInfo]:
+        pass
+
+    def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                       cities_info: Cities) -> List[RouteInfo]:
+        pass
+
+    def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
+                                              return_date: datetime, cities_info: Cities) -> List[RouteInfo]:
         pass
 
     def find_routes_for_depart_point(self, depart_point):
