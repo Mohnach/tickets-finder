@@ -38,6 +38,12 @@ class Aviasales(TicketProvider):
                 # ищем билеты в базе
                 #  если нашли, возвращаем,
                 #  если не нашли - идем на сайт
+                if convert_to_iata is True:
+                    iatas = {}
+                    iatas = self.convert_city_name_to_iata(origin_city, destination_city)
+                    destination_city = iatas['destination']
+                    origin_city = iatas['origin']    
+
                 tickets = self.get_from_cache(origin_city, destination_city, departure_date, return_date)
                 if tickets is not None:
                     return tickets
