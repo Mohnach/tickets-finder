@@ -9,11 +9,15 @@ class Cities:
     airports = None
     airports_dict = None
     stations = None
+    russian_popular_cities = None
+    international_popular_cities = None
 
     def __init__(self):
         self.load_cities_info()
         self.load_airports_data()
         self.load_esr_data()
+        self.load_russian_popular_cities()
+        self.load_int_popular_cities()
 
     def load_cities_info(self):
         cities_file = configs.CITIES_LOCATION
@@ -26,6 +30,11 @@ class Cities:
             if row['name'] == russian_name:
                 eng_name = row['name_translations']['en']
         return eng_name
+
+    def translate_from_iata_to_english(self, iata):
+        for row in self.cities:
+            if row['code'] == iata:
+                return row['name_translations']['en']
 
     def get_iata(self, eng_name=None, rus_name=None):
         if eng_name is not None:
@@ -62,6 +71,7 @@ class Cities:
         coords = self.get_coordinates_from_airports_base(iata)
         if coords is None:
             coords = self.get_coordinates_from_cities_base(iata)
+        return coords
 
     def calculate_distance(self, origin_coords, destination_coords):
         if not origin_coords or not destination_coords:
@@ -152,6 +162,42 @@ class Cities:
             print(e.text)
             self.stations = []
         return self.stations
+
+    def load_russian_popular_cities(self):
+        self.russian_popular_cities = []
+        try:
+            csv_file = configs.RUSSIAN_POPULAR_CITIES_LOCATION
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                fields = [
+                    'number',
+                    'name',
+                    'rating'
+                ]
+                reader = csv.DictReader(f, fields, delimiter=';')
+                for row in reader:
+                    row['name'] = row['name'].replace('-', ' ')
+                    self.russian_popular_cities.append(row['name'].strip())
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.russian_popular_cities = []
+        return self.russian_popular_cities
+
+    def load_int_popular_cities(self):
+        self.international_popular_cities = []
+        try:
+            csv_file = configs.POPULAR_CITIES_LOCATION
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f, delimiter=';')
+                for row in reader:
+                    self.international_popular_cities.append(row['City'].strip())
+        except OSError as e:
+            print(f'не удалось открыть csv файл. {repr(e)}')
+        except (ValueError, KeyError) as e:
+            print(e.text)
+            self.international_popular_cities = []
+        return self.international_popular_cities
 
 
 if __name__ == "__main__":
