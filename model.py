@@ -52,6 +52,7 @@ class AviasalesCache(Base):
 
     # fields from AviasalesInfo
     airline = Column(String)
+    number = Column(String)
 
     def __repr__(self):
         return f"""<{self.__class__}. id: {self.id}. Origin city: {self.origin_city}.

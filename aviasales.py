@@ -18,12 +18,14 @@ from sqlalchemy.orm import mapper
 @dataclass
 class AviasalesInfo(RouteInfo):
     airline: str = ''
+    number: str = ''
 
 
 class Aviasales(TicketProvider):
 
     my_mapper = mapper(AviasalesInfo, AviasalesCache.__table__, properties={
-            'airline': AviasalesCache.__table__.c.airline
+            'airline': AviasalesCache.__table__.c.airline,
+            'number': AviasalesCache.__table__.c.number
         })
 
     def __init__(self, db_session):
@@ -42,7 +44,7 @@ class Aviasales(TicketProvider):
                     iatas = {}
                     iatas = self.convert_city_name_to_iata(origin_city, destination_city)
                     destination_city = iatas['destination']
-                    origin_city = iatas['origin']    
+                    origin_city = iatas['origin']
 
                 tickets = self.get_from_cache(origin_city, destination_city, departure_date, return_date)
                 if tickets is not None:
