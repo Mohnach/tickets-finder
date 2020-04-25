@@ -21,7 +21,7 @@ class Cities:
 
     def load_cities_info(self):
         cities_file = configs.CITIES_LOCATION
-        with open(cities_file, "r") as read_file:
+        with open(cities_file, "r", encoding='utf-8') as read_file:
             data = json.load(read_file)
         self.cities = data
 
