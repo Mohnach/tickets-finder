@@ -26,7 +26,7 @@ def get_return_tickets(origin_city, destination_city, departure_date, return_dat
     return tickets
 
 
-def get_tickets_for_all_dections(origin_city, departure_date, providers_list):
+def get_tickets_for_all_directions(origin_city, departure_date, providers_list):
     # содержит инфу о городах: переводы на разные языки, iata code, координаты
     cities_info = Cities()
 
