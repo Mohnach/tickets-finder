@@ -197,6 +197,7 @@ class Tutu(TicketProvider):
         return routes
 
     def find_stations(self, origin_city):
+        origin_city = origin_city.replace('-', ' ')
         routes = []
         # if origin_city in self.routes_dict:
         try:
