@@ -119,8 +119,8 @@ class Tutu(TicketProvider):
 
     def get_from_cache(self, route, depart_date):
         try:
-            origin_city_id = route['departure_station_id']
-            destination_city_id = route['arrival_station_id']
+            origin_city_id = route['departure_station_name']
+            destination_city_id = route['arrival_station_name']
 
             next_day = depart_date + timedelta(days=1)
 
@@ -250,7 +250,7 @@ class Tutu(TicketProvider):
         # write_file('data/new_test.html', html)
 
         routes_in_json = self.get_routes_in_json(html)
-        tickets = self.get_tickets_from_json(routes_in_json)
+        tickets = self.get_tickets_from_json(routes_in_json, route)
 
         return tickets
 
@@ -288,7 +288,7 @@ class Tutu(TicketProvider):
             print(f'ошибка при парсинге html. {repr(e)}')
         return None
 
-    def get_tickets_from_json(self, data):
+    def get_tickets_from_json(self, data, route):
         tickets = []
 
         try:
@@ -318,8 +318,10 @@ class Tutu(TicketProvider):
                             ticket.url = seats['buyAbsUrl']
 
                             ticket.number = trip['trainNumber']
-                            ticket.origin_city = trip['departureStation']
-                            ticket.destination_city = trip['arrivalStation']
+                            # ticket.origin_city = trip['departureStation']
+                            # ticket.destination_city = trip['arrivalStation']
+                            ticket.origin_city = route['departure_station_name']
+                            ticket.destination_city = route['arrival_station_name']
                             depart_date_str = trip['departureDate'] + ' ' + trip['departureTime']
                             ticket.depart_datetime = datetime.strptime(depart_date_str, '%Y-%m-%d %H:%M:%S')
                             arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
