@@ -28,8 +28,7 @@ class Cities:
     def translate_from_russian_to_english(self, russian_name):
         for row in self.cities:
             if row['name'] == russian_name:
-                eng_name = row['name_translations']['en']
-        return eng_name
+                return row['name_translations'].get('en')
 
     def translate_from_iata_to_english(self, iata):
         for row in self.cities:
