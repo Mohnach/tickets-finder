@@ -14,6 +14,7 @@ class RouteInfo:
     return_datetime: Optional[datetime] = None
     price: Decimal = Decimal('0')
     obtained_datetime: datetime = field(default_factory=datetime.now)
+    nice: int = 0
 
     @property
     def depart_date(self) -> Optional[date]:
