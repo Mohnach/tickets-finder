@@ -75,7 +75,7 @@ class Tutu(TicketProvider):
             routes_list = self.find_routes_for_depart_point(station)
             print('Число маршрутов со станции {}: {}'.format(station, len(routes_list)))
             for route in routes_list:
-                if route['arrival_station_name'] in cities_info.russian_popular_cities:
+                if any(route['arrival_station_name'].startswith(s) for s in cities_info.russian_popular_cities):
                     print('from {} to {}'.format(station, route['arrival_station_name']))
 
                     # Если дистанция между станциями больше 1000км, то пропускаем это направление
@@ -201,7 +201,7 @@ class Tutu(TicketProvider):
         # if origin_city in self.routes_dict:
         try:
             for key in self.routes_dict:
-                if origin_city in key:
+                if key.startswith(origin_city):
                     routes.append(key)
         except (ValueError, KeyError) as e:
             print(f'error in routes_dict. {repr(e)}')
