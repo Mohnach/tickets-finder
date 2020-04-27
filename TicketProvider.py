@@ -15,19 +15,19 @@ class TicketProvider:
         self.session = db_session
 
     def get_tickets(self, origin: str, destination: str, depart_date: datetime) -> List[RouteInfo]:
-        pass
+        raise NotImplementedError()
 
     def get_return_tickets(self, origin: str, destination: str, depart_date: datetime,
                            return_date: datetime) -> List[RouteInfo]:
-        pass
+        raise NotImplementedError()
 
     def get_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
                                        cities_info: Cities) -> List[RouteInfo]:
-        pass
+        raise NotImplementedError()
 
     def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime,
                                               return_date: datetime, cities_info: Cities) -> List[RouteInfo]:
-        pass
+        raise NotImplementedError()
 
     def find_routes_for_depart_point(self, depart_point):
         routes = []
