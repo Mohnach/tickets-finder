@@ -72,7 +72,7 @@ class TicketProvider:
 
     def init_proxies(self):
         url = 'https://free-proxy-list.net/'
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         proxies = list()
         soup = BeautifulSoup(response.text, 'html.parser')
         proxies_list = soup.find('tbody').findAll('tr')

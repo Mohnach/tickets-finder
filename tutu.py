@@ -257,7 +257,7 @@ class Tutu(TicketProvider):
 
     def get_html(self, url, params=None, header=None):
         try:
-            result = requests.get(url, params=params, headers=header)
+            result = requests.get(url, params=params, headers=header, timeout=5)
             result.raise_for_status()
             return result.text
         except(requests.RequestException, ValueError):
@@ -361,7 +361,7 @@ class Tutu(TicketProvider):
             'User-Agent': user_agent
             }
         try:
-            result = requests.get(trains_url, params=params, headers=headers)
+            result = requests.get(trains_url, params=params, headers=headers, timeout=5)
             result.raise_for_status()
             text_result = result.text
 

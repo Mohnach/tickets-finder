@@ -92,7 +92,7 @@ class Aviasales(TicketProvider):
             'Accept-Encoding': 'gzip, deflate'
         }
         try:
-            result = requests.get(tickets_url, params=params, headers=headers)
+            result = requests.get(tickets_url, params=params, headers=headers, timeout=5)
             result.raise_for_status()
             json_result = result.json()
 
@@ -196,7 +196,7 @@ class Aviasales(TicketProvider):
         }
 
         try:
-            result = requests.get(iata_url, params=params)
+            result = requests.get(iata_url, params=params, timeout=5)
             result.raise_for_status()
             json_result = result.json()
 
@@ -232,7 +232,7 @@ class Aviasales(TicketProvider):
             'token': secrets.travelpayouts_token
         }
         try:
-            result = requests.get(tickets_url, params=params)
+            result = requests.get(tickets_url, params=params, timeout=5)
             result.raise_for_status()
             json_result = result.json()
 
