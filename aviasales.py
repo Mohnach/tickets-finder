@@ -33,25 +33,19 @@ class Aviasales(TicketProvider):
         self.load_flights_routes()
 
     def use_cache(func):
-        def wrapped(self, origin_city, destination_city, departure_date, return_date, convert_to_iata, use_cache=True):
+        def wrapped(self, origin_city, destination_city, departure_date, return_date, use_cache=True):
             if use_cache is False:
-                return func(self, origin_city, destination_city, departure_date, return_date, convert_to_iata)
+                return func(self, origin_city, destination_city, departure_date, return_date)
             else:
                 # ищем билеты в базе
                 #  если нашли, возвращаем,
                 #  если не нашли - идем на сайт
-                if convert_to_iata is True:
-                    iatas = {}
-                    iatas = self.convert_city_name_to_iata(origin_city, destination_city)
-                    destination_city = iatas['destination']
-                    origin_city = iatas['origin']
-
                 tickets = self.get_from_cache(origin_city, destination_city, departure_date, return_date)
                 if tickets is not None:
                     return tickets
 
                 print('В кэше ничего не нашлось. Погнали на сайт')
-                tickets = func(self, origin_city, destination_city, departure_date, return_date, convert_to_iata)
+                tickets = func(self, origin_city, destination_city, departure_date, return_date)
 
                 if tickets:
                     self.store_to_cache(tickets)
@@ -64,13 +58,10 @@ class Aviasales(TicketProvider):
 
     @use_cache
     def get_return_tickets(self, origin_city: str, destination_city: str, depart_date: datetime,
-                           return_date: datetime, convert_to_iata=True) -> List[RouteInfo]:
+                           return_date: datetime) -> List[RouteInfo]:
         iatas = {}
-        if convert_to_iata is True:
-            iatas = self.convert_city_name_to_iata(origin_city, destination_city)
-        else:
-            iatas['destination'] = destination_city
-            iatas['origin'] = origin_city
+        iatas['destination'] = destination_city
+        iatas['origin'] = origin_city
 
         try:
             destination_iata = iatas.get('destination')
@@ -140,8 +131,7 @@ class Aviasales(TicketProvider):
                     tickets += self.get_return_tickets(airport,
                                                        route['Destination airport'],
                                                        depart_date,
-                                                       return_date,
-                                                       convert_to_iata=False)
+                                                       return_date)
         return tickets
 
     def get_from_cache(self, origin_city, destination_city, depart_date, return_date):
