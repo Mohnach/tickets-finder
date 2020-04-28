@@ -6,8 +6,8 @@ from typing import Optional
 
 @dataclass
 class RouteInfo:
-    origin_city: str = ''
-    destination_city: str = ''
+    origin_point: str = ''
+    destination_point: str = ''
     route_type: str = ''
     depart_datetime: Optional[datetime] = None
     arrival_datetime: Optional[datetime] = None

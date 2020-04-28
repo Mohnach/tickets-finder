@@ -15,8 +15,8 @@ class Base(object):
 class TutuCache(Base):
     # fields from RouteInfo
     route_type = Column(String)
-    origin_city = Column(String)
-    destination_city = Column(String)
+    origin_point = Column(String)
+    destination_point = Column(String)
     depart_datetime = Column(DateTime)
     arrival_datetime = Column(DateTime)
     return_datetime = Column(DateTime)
@@ -42,8 +42,8 @@ class TutuCache(Base):
 class AviasalesCache(Base):
     # fields from RouteInfo
     route_type = Column(String)
-    origin_city = Column(String)
-    destination_city = Column(String)
+    origin_point = Column(String)
+    destination_point = Column(String)
     depart_datetime = Column(DateTime)
     arrival_datetime = Column(DateTime)
     return_datetime = Column(DateTime)
@@ -60,5 +60,5 @@ class AviasalesCache(Base):
 
 
 if __name__ == "__main__":
-    test = TutuCache(origin_city="Default")
+    test = TutuCache(origin_point="Default")
     print(test)

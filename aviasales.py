@@ -19,6 +19,8 @@ from sqlalchemy.orm import mapper
 class AviasalesInfo(RouteInfo):
     airline: str = ''
     number: str = ''
+    origin_city: str = ''
+    destination_city: str = ''
 
 
 class Aviasales(TicketProvider):
@@ -140,8 +142,8 @@ class Aviasales(TicketProvider):
             next_day_after_return = return_date + timedelta(days=1)
 
             tickets = self.session.query(self.my_mapper).filter(
-                    AviasalesCache.destination_city == destination_city,
-                    AviasalesCache.origin_city == origin_city,
+                    AviasalesCache.destination_point == destination_city,
+                    AviasalesCache.origin_point == origin_city,
                     AviasalesCache.depart_datetime.between(depart_date, next_day_after_departure),
                     AviasalesCache.return_datetime.between(return_date, next_day_after_return)
                 )
@@ -242,8 +244,8 @@ class Aviasales(TicketProvider):
                 ticket_value = tickets_list.get(ticket_key)
                 ticket = AviasalesInfo()
                 ticket.route_type = 'plane'
-                ticket.origin_city = origin_city
-                ticket.destination_city = destination_city
+                ticket.origin_point = origin_city
+                ticket.destination_point = destination_city
                 ticket.number = ticket_value.get('flight_number')
                 ticket.airline = ticket_value.get('airline')
                 ticket.price = Decimal(ticket_value.get('price'))
@@ -282,6 +284,10 @@ class Aviasales(TicketProvider):
             print(e.text)
             self.routes_dict = {}
         return self.routes_dict
+
+    def add_readable_names_for_airports(self, tickets: List[AviasalesInfo], cities_info: Cities):
+        for ticket in tickets:
+            pass
 
 
 if __name__ == "__main__":

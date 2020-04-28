@@ -119,14 +119,14 @@ class Tutu(TicketProvider):
 
     def get_from_cache(self, route, depart_date):
         try:
-            origin_city_id = route['departure_station_name']
-            destination_city_id = route['arrival_station_name']
+            departure_station_name = route['departure_station_name']
+            arrival_station_name = route['arrival_station_name']
 
             next_day = depart_date + timedelta(days=1)
 
             tickets = self.session.query(self.my_mapper).filter(
-                    TutuCache.destination_city == destination_city_id,
-                    TutuCache.origin_city == origin_city_id,
+                    TutuCache.destination_point == arrival_station_name,
+                    TutuCache.origin_point == departure_station_name,
                     TutuCache.depart_datetime.between(depart_date, next_day)
                 )
 
@@ -319,10 +319,10 @@ class Tutu(TicketProvider):
                             ticket.url = seats['buyAbsUrl']
 
                             ticket.number = trip['trainNumber']
-                            # ticket.origin_city = trip['departureStation']
-                            # ticket.destination_city = trip['arrivalStation']
-                            ticket.origin_city = route['departure_station_name']
-                            ticket.destination_city = route['arrival_station_name']
+                            # ticket.origin_point = trip['departureStation']
+                            # ticket.destination_point = trip['arrivalStation']
+                            ticket.origin_point = route['departure_station_name']
+                            ticket.destination_point = route['arrival_station_name']
                             depart_date_str = trip['departureDate'] + ' ' + trip['departureTime']
                             ticket.depart_datetime = datetime.strptime(depart_date_str, '%Y-%m-%d %H:%M:%S')
                             arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
