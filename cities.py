@@ -14,6 +14,7 @@ class Cities:
 
     def __init__(self):
         self.load_cities_info()
+        self.load_airports_info()
         self.load_airports_data()
         self.load_esr_data()
         self.load_russian_popular_cities()
@@ -25,6 +26,12 @@ class Cities:
             data = json.load(read_file)
         self.cities = data
 
+    def load_airports_info(self):
+        airports_file = configs.AIRPORTS_TP_LOCATION
+        with open(airports_file, "r", encoding='utf-8') as read_file:
+            data = json.load(read_file)
+        self.airports_tp = data
+
     def translate_from_russian_to_english(self, russian_name):
         for row in self.cities:
             if row['name'] == russian_name:
@@ -34,6 +41,13 @@ class Cities:
         for row in self.cities:
             if row['code'] == iata:
                 return row['name_translations']['en']
+
+    def convert_iata_to_russian_city_name(self, iata):
+        for airport_row in self.airports_tp:
+            if airport_row['code'] == iata:
+                for city_row in self.cities:
+                    if city_row['code'] == airport_row['city_code']:
+                        return city_row['name']
 
     def get_iata(self, eng_name=None, rus_name=None):
         if eng_name is not None:

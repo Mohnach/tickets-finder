@@ -134,6 +134,8 @@ class Aviasales(TicketProvider):
                                                        route['Destination airport'],
                                                        depart_date,
                                                        return_date)
+
+                    tickets = self.add_readable_names_for_airports(tickets, cities_info)
         return tickets
 
     def get_from_cache(self, origin_city, destination_city, depart_date, return_date):
@@ -287,7 +289,9 @@ class Aviasales(TicketProvider):
 
     def add_readable_names_for_airports(self, tickets: List[AviasalesInfo], cities_info: Cities):
         for ticket in tickets:
-            pass
+            ticket.origin_city = cities_info.convert_iata_to_russian_city_name(ticket.origin_point)
+            ticket.destination_city = cities_info.convert_iata_to_russian_city_name(ticket.destination_point)
+        return tickets
 
 
 if __name__ == "__main__":

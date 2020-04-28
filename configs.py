@@ -18,3 +18,5 @@ STATIONS_LOCATION = os.path.join(basedir, 'data/osm2esr.csv')
 POPULAR_CITIES_LOCATION = os.path.join(basedir, 'data/popular_cities.csv')
 # http://towntravel.ru/interesnie-fakti-o-gorodah-rossyi/samye-populyarnye-goroda-rossii-top-50-za-2018-2019-god.html
 RUSSIAN_POPULAR_CITIES_LOCATION = os.path.join(basedir, 'data/russian_cities_rating.csv')
+# http://api.travelpayouts.com/data/ru/airports.json
+AIRPORTS_TP_LOCATION = os.path.join(basedir, 'data/airports.json')
