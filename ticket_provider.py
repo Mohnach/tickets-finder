@@ -1,5 +1,5 @@
 from datetime import datetime
-from .RouteInfo import RouteInfo
+from .route_info import RouteInfo
 from .cities import Cities
 from typing import List
 import random

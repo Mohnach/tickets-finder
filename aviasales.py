@@ -2,8 +2,8 @@ import requests
 from . import secrets
 from decimal import Decimal
 from datetime import datetime, timedelta
-from .TicketProvider import TicketProvider
-from .RouteInfo import RouteInfo
+from .ticket_provider import TicketProvider
+from .route_info import RouteInfo
 from dataclasses import dataclass
 from typing import List
 from . import configs
