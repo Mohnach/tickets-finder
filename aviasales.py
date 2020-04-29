@@ -21,6 +21,7 @@ class AviasalesInfo(RouteInfo):
     number: str = ''
     origin_city: str = ''
     destination_city: str = ''
+    travel_time: int = 0
 
 
 class Aviasales(TicketProvider):
@@ -130,12 +131,14 @@ class Aviasales(TicketProvider):
                         print(f'Далеко: {distance}km')
                         continue
 
-                    tickets += self.get_return_tickets(airport,
-                                                       route['Destination airport'],
-                                                       depart_date,
-                                                       return_date)
+                    new_tickets = self.get_return_tickets(airport,
+                                                          route['Destination airport'],
+                                                          depart_date,
+                                                          return_date)
+                    new_tickets = self.add_estimated_travel_time(new_tickets, distance)
+                    tickets += new_tickets
 
-                    tickets = self.add_readable_names_for_airports(tickets, cities_info)
+            tickets = self.add_readable_names_for_airports(tickets, cities_info)
         return tickets
 
     def get_from_cache(self, origin_city, destination_city, depart_date, return_date):
@@ -291,6 +294,14 @@ class Aviasales(TicketProvider):
         for ticket in tickets:
             ticket.origin_city = cities_info.convert_iata_to_russian_city_name(ticket.origin_point)
             ticket.destination_city = cities_info.convert_iata_to_russian_city_name(ticket.destination_point)
+        return tickets
+
+    def add_estimated_travel_time(self, tickets: List[AviasalesInfo], distance: int):
+        AVERAGE_AIRCRAFTS_SPEED = 600  # км/ч
+        TIME_FOR_AIRPORTS_ROUTINE = 2  # часа
+        estimate_travel_time = distance / AVERAGE_AIRCRAFTS_SPEED + TIME_FOR_AIRPORTS_ROUTINE
+        for ticket in tickets:
+            ticket.travel_time = timedelta(hours=estimate_travel_time).seconds
         return tickets
 
 
