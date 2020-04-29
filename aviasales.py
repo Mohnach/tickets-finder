@@ -22,6 +22,7 @@ class AviasalesInfo(RouteInfo):
     origin_city: str = ''
     destination_city: str = ''
     travel_time: int = 0
+    url: str = ''
 
 
 class Aviasales(TicketProvider):
@@ -155,6 +156,7 @@ class Aviasales(TicketProvider):
                     tickets += new_tickets
 
             tickets = self.add_readable_names_for_airports(tickets, cities_info)
+            tickets = self.add_mock_url_to_aviatickets(tickets)
         return tickets
 
     def get_from_cache(self, origin_city, destination_city, depart_date, return_date):
@@ -320,6 +322,13 @@ class Aviasales(TicketProvider):
         estimate_travel_time = distance / AVERAGE_AIRCRAFTS_SPEED + TIME_FOR_AIRPORTS_ROUTINE
         for ticket in tickets:
             ticket.travel_time = timedelta(hours=estimate_travel_time).seconds
+        return tickets
+
+    def add_mock_url_to_aviatickets(self, tickets: List[AviasalesInfo]):
+        for ticket in tickets:
+            url_template = 'https://www.google.com/search?q='
+            ticket.url = url_template + ticket.airline + '+' + ticket.number + '+flight+' +\
+                ticket.depart_date.strftime('%d+%B+%Y')
         return tickets
 
 
