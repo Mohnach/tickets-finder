@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL, Boolean
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 
@@ -22,6 +22,7 @@ class TutuCache(Base):
     return_datetime = Column(DateTime)
     price = Column(DECIMAL)
     obtained_datetime = Column(DateTime)
+    is_empty = Column(Boolean)
 
     # fields from TutuInfo
     seat_type = Column(String)
@@ -49,6 +50,7 @@ class AviasalesCache(Base):
     return_datetime = Column(DateTime)
     price = Column(DECIMAL)
     obtained_datetime = Column(DateTime)
+    is_empty = Column(Boolean)
 
     # fields from AviasalesInfo
     airline = Column(String)

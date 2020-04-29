@@ -39,6 +39,22 @@ class TicketProvider:
                 print(f'error in routes_dict. {repr(e)}')
         return routes
 
+    def create_empty_ticket(self, origin_city: str, destination_city: str,
+                            depart_date: datetime,
+                            ticket_type: str, ticket_class: RouteInfo,
+                            arrival_date: datetime = None, return_date: datetime = None):
+        ticket = ticket_class()
+        ticket.route_type = ticket_type
+        ticket.origin_point = origin_city
+        ticket.destination_point = destination_city
+        ticket.depart_datetime = depart_date
+        if arrival_date is not None:
+            ticket.arrival_date = arrival_date
+        if return_date is not None:
+            ticket.return_datetime = return_date
+        ticket.is_empty = True
+        return ticket
+
     def get_random_user_agent(self):
         user_agent_list = [
             # Chrome

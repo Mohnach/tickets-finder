@@ -44,14 +44,30 @@ class Aviasales(TicketProvider):
                 #  если нашли, возвращаем,
                 #  если не нашли - идем на сайт
                 tickets = self.get_from_cache(origin_city, destination_city, departure_date, return_date)
+
                 if tickets is not None:
+                    for ticket in tickets:
+                        if ticket.is_empty is True:
+                            print('В кэше пишут, что искать по этому направлению бесполезно')
+                            return []
                     return tickets
 
                 print('В кэше ничего не нашлось. Погнали на сайт')
                 tickets = func(self, origin_city, destination_city, departure_date, return_date)
 
-                if tickets:
+                if not tickets:
+                    print('Там ничего нет. Так и запишем')
+                    empty_ticket = self.create_empty_ticket(origin_city=origin_city,
+                                                            destination_city=destination_city,
+                                                            depart_date=departure_date,
+                                                            return_date=return_date,
+                                                            ticket_type='plain',
+                                                            ticket_class=AviasalesInfo)
+                    tickets.append(empty_ticket)
                     self.store_to_cache(tickets)
+                    return []
+
+                self.store_to_cache(tickets)
 
                 return tickets
         return wrapped
@@ -259,6 +275,8 @@ class Aviasales(TicketProvider):
 
                 return_str = ticket_value.get('return_at')
                 ticket.return_datetime = datetime.strptime(return_str, '%Y-%m-%dT%H:%M:%SZ')
+
+                ticket.is_empty = False
 
                 tickets.append(ticket)
 

@@ -106,13 +106,29 @@ class Tutu(TicketProvider):
                 #  если не нашли - идем на сайт
                 tickets = self.get_from_cache(route, depart_date)
                 if tickets is not None:
+                    for ticket in tickets:
+                        if ticket.is_empty is True:
+                            print('В кэше пишут, что искать по этому направлению бесполезно')
+                            return []
                     return tickets
 
                 print('В кэше ничего не нашлось. Погнали на сайт')
                 tickets = func(self, route, depart_date)
 
-                if tickets:
+                if not tickets:
+                    print('Там ничего нет. Так и запишем')
+                    departure_station_name = route['departure_station_name']
+                    arrival_station_name = route['arrival_station_name']
+                    empty_ticket = self.create_empty_ticket(origin_city=departure_station_name,
+                                                            destination_city=arrival_station_name,
+                                                            depart_date=depart_date,
+                                                            ticket_type='train',
+                                                            ticket_class=TutuInfo)
+                    tickets.append(empty_ticket)
                     self.store_to_cache(tickets)
+                    return []
+
+                self.store_to_cache(tickets)
 
                 return tickets
         return wrapped
@@ -328,6 +344,8 @@ class Tutu(TicketProvider):
                             arrival_date_str = trip['arrivalDate'] + ' ' + trip['arrivalTime']
                             ticket.arrival_datetime = datetime.strptime(arrival_date_str, '%Y-%m-%d %H:%M:%S')
                             ticket.travel_time = trip['travelTimeSeconds']
+
+                            ticket.is_empty = False
 
                             tickets.append(ticket)
         except (ValueError, KeyError, TypeError) as e:
