@@ -89,7 +89,7 @@ class Tutu(TicketProvider):
                     tickets += self.get_tickets(route['departure_station_name'],
                                                 route['arrival_station_name'],
                                                 depart_date)
-
+            tickets = self.add_attractions_link(tickets, 'destination_point')
         return tickets
 
     def get_return_tickets_for_all_directions(self, origin_city: str, depart_date: datetime, return_date: datetime,

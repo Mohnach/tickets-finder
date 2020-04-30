@@ -55,6 +55,12 @@ class TicketProvider:
         ticket.is_empty = True
         return ticket
 
+    def add_attractions_link(self, tickets: List[RouteInfo], city_func):
+        for ticket in tickets:
+            url_template = 'https://www.google.com/search?q='
+            ticket.attractions_url = url_template + 'TripAdvisor+достопримечательности' + '+' + getattr(ticket, city_func)
+        return tickets
+
     def get_random_user_agent(self):
         user_agent_list = [
             # Chrome

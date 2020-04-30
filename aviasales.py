@@ -157,6 +157,7 @@ class Aviasales(TicketProvider):
 
             tickets = self.add_readable_names_for_airports(tickets, cities_info)
             tickets = self.add_mock_url_to_aviatickets(tickets)
+            tickets = self.add_attractions_link(tickets, 'destination_city')
         return tickets
 
     def get_from_cache(self, origin_city, destination_city, depart_date, return_date):

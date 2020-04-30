@@ -16,6 +16,7 @@ class RouteInfo:
     obtained_datetime: datetime = field(default_factory=datetime.now)
     nice: int = 0
     is_empty: bool = True
+    attractions_url: str = ''
 
     @property
     def depart_date(self) -> Optional[date]:
