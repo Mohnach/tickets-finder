@@ -135,6 +135,7 @@ class Aviasales(TicketProvider):
         for airport in airports:
             # поиск всех возможных направлений для заданного аэропорта
             routes_list = self.find_routes_for_depart_point(airport)
+            routes_list = self.get_unique_routes(routes_list)
             print('Число маршрутов из аэропорта {}: {}'.format(airport, len(routes_list)))
 
             for route in routes_list:
@@ -332,6 +333,17 @@ class Aviasales(TicketProvider):
             ticket.url = url_template + ticket.airline + '+' + ticket.number + '+flight+' +\
                 ticket.depart_date.strftime('%d+%B+%Y')
         return tickets
+
+    def get_unique_routes(self, routes):
+        seen = set()
+        filtered_routes = []
+        for route in routes:
+            target_city = route['Destination airport']
+            if target_city not in seen:
+                seen.add(target_city)
+                filtered_routes.append(route)
+
+        return filtered_routes
 
 
 if __name__ == "__main__":
