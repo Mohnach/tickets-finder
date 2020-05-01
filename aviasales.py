@@ -90,7 +90,8 @@ class Aviasales(TicketProvider):
             print('Invalid city name')
             return []
 
-        tickets_url = 'http://api.travelpayouts.com/v1/prices/cheap'
+        # tickets_url = 'http://api.travelpayouts.com/v1/prices/cheap'
+        tickets_url = 'https://api.travelpayouts.com/v1/prices/direct'
         params = {
             'currency': 'rub',
             'origin': origin_iata,
