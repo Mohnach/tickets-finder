@@ -132,7 +132,8 @@ class Cities:
         return self.airports
 
     def find_airports_for_city(self, city):
-        city = city.replace('Saint', 'St.')
+        if city is not None:
+            city = city.replace('Saint', 'St.')
         airports = []
         if city in self.airports_dict:
             try:
